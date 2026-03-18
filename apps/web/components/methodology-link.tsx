@@ -27,9 +27,21 @@ export const METHODOLOGY_SECTION_IDS = {
 } as const;
 
 const withScrollQuery = (path: string, scrollY: number) => {
-  const separator = path.includes("?") ? "&" : "?";
-  return `${path}${separator}${SCROLL_QUERY_KEY}=${encodeURIComponent(String(scrollY))}`;
+  const url = new URL(path, window.location.origin);
+  url.searchParams.set(SCROLL_QUERY_KEY, String(scrollY));
+  return `${url.pathname}${url.search}${url.hash}`;
 };
+
+const normalizeDashboardPath = (path: string) => {
+  const url = new URL(path, window.location.origin);
+  if (url.pathname === "/" && url.searchParams.get("resume") !== "1") {
+    url.searchParams.set("resume", "1");
+  }
+  return `${url.pathname}${url.search}${url.hash}`;
+};
+
+export const buildDashboardReturnTo = (path: string, scrollY: number) =>
+  withScrollQuery(normalizeDashboardPath(path), scrollY);
 
 export const buildMethodologyMetricHref = (sectionId: string) =>
   `${METHODOLOGY_PATH}#${sectionId}`;
@@ -68,7 +80,8 @@ export const MethodologyLink = ({
       event.preventDefault();
       event.stopPropagation();
       const currentPath = `${window.location.pathname}${window.location.search}`;
-      const scrollAwareReturnTo = withScrollQuery(currentPath, window.scrollY);
+      const scrollAwareReturnTo = buildDashboardReturnTo(currentPath, window.scrollY);
+      window.history.replaceState(window.history.state, "", scrollAwareReturnTo);
       const url = new URL(buildMethodologyMetricHref(sectionId), window.location.origin);
       url.searchParams.set("returnTo", scrollAwareReturnTo);
       router.push(`${url.pathname}${url.search}${url.hash}`);

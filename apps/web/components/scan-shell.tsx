@@ -13,7 +13,7 @@ import { reportClientError } from "../lib/client-error-reporting";
 import { cn, formatPct, formatUsd } from "../lib/utils";
 import { useScanStore } from "../store/use-scan-store";
 import { AssetIcon } from "./asset-icon";
-import { MethodologyLink, METHODOLOGY_SECTION_IDS, restoreDashboardScrollFromUrl } from "./methodology-link";
+import { MethodologyLink, METHODOLOGY_SECTION_IDS, buildDashboardReturnTo, restoreDashboardScrollFromUrl } from "./methodology-link";
 import { BeforeAfterBars, CompositionCompare, SimplificationVisual, StackedBar } from "./metrics-visuals";
 import { Badge, Button, Card } from "./ui";
 import { DepositDrawer } from "./yo-deposit-drawer";
@@ -1053,9 +1053,8 @@ export const ScanShell = ({
 
   const openMethodologyPage = React.useCallback(() => {
     const currentPath = `${pathname}${typeof window !== "undefined" ? window.location.search : ""}`;
-    const returnTo = `${currentPath}${currentPath.includes("?") ? "&" : "?"}scrollY=${encodeURIComponent(
-      String(typeof window !== "undefined" ? window.scrollY : 0),
-    )}`;
+    const returnTo = buildDashboardReturnTo(currentPath, typeof window !== "undefined" ? window.scrollY : 0);
+    window.history.replaceState(window.history.state, "", returnTo);
     router.push(`/methodology?returnTo=${encodeURIComponent(returnTo)}`);
   }, [pathname, router]);
 
