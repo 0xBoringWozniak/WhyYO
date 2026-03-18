@@ -51,6 +51,18 @@ const formatReadableValue = (value: number | null, formatter: (value: number) =>
   value === null ? fallback : formatter(value);
 const formatMetricNumber = (value: number | null | undefined, digits = 2) =>
   value === null || value === undefined ? "n/a" : value.toFixed(digits);
+const getDisplayPositionCount = ({
+  positionCount,
+  defiPositionCount,
+  idlePositionCount,
+}: {
+  positionCount: number;
+  defiPositionCount: number;
+  idlePositionCount: number;
+}) => {
+  if (defiPositionCount === 0 && idlePositionCount > 0) return 1;
+  return positionCount;
+};
 const formatBucketUsd = (value: number) => {
   if (Math.abs(value) < 1_000_000) return formatUsd(value);
   if (Math.abs(value) < 1_000_000_000) {
@@ -722,6 +734,11 @@ const BucketOverviewCard = ({
 }) => {
   const idlePct = Math.max(0, Math.min(100, bucket.idleSharePct * 100));
   const productivePct = Math.max(0, Math.min(100, 100 - idlePct));
+  const displayPositionCount = getDisplayPositionCount({
+    positionCount: bucket.positionCount,
+    defiPositionCount: bucket.defiPositionCount,
+    idlePositionCount: bucket.idlePositionCount,
+  });
   const coveredPct =
     bucket.riskCoveragePct === null ? 0 : Math.max(0, Math.min(100, productivePct * bucket.riskCoveragePct));
   const unknownPct = Math.max(0, 100 - coveredPct);
@@ -778,7 +795,7 @@ const BucketOverviewCard = ({
       </div>
       <div>
         <div className="text-white/62">Positions</div>
-        <div className="mt-1 text-white">{bucket.positionCount}</div>
+        <div className="mt-1 text-white">{displayPositionCount}</div>
       </div>
     </div>
 
@@ -901,6 +918,10 @@ const RecommendationCard = ({
     yellowMax: 30,
     orangeMax: 50,
   });
+  const displayBeforePositions =
+    recommendation.visualization.currentComposition.protocols.length === 0 && recommendation.metrics.idleAssetUsd > 0
+      ? 1
+      : recommendation.visualization.simplification.beforePositions;
 
   return (
     <Card className="w-full min-w-full snap-start overflow-visible p-0">
@@ -1023,7 +1044,7 @@ const RecommendationCard = ({
 
               <div className="mt-auto space-y-4 border-t border-white/8 pt-4">
                 <SimplificationVisual
-                  beforePositions={recommendation.visualization.simplification.beforePositions}
+                  beforePositions={displayBeforePositions}
                   afterPositions={recommendation.visualization.simplification.afterPositions}
                 />
                 <div className="flex justify-center">
@@ -1235,6 +1256,10 @@ export const ScanShell = ({
 
   const totalValue = scan?.portfolioOverview.totalUsd ?? 0;
   const recommendations = scan?.recommendations ?? [];
+  const sortedRecommendations = React.useMemo(
+    () => [...recommendations].sort((left, right) => right.suggestedUsd - left.suggestedUsd),
+    [recommendations],
+  );
   const tokenExposures = scan?.portfolioOverview.tokenExposures ?? [];
   const protocolExposures = scan?.portfolioOverview.protocolExposures ?? [];
   const analyzedUsd = scan?.portfolioOverview.analyzedUsd ?? 0;
@@ -1315,11 +1340,11 @@ export const ScanShell = ({
                   </div>
                 </div>
 
-                <div className="mt-10 flex min-h-[28rem] flex-col justify-between gap-10">
+                <div className="mt-10 space-y-8">
                   <h1 className="yo-display max-w-5xl text-[4.3rem] leading-[0.9] md:text-[6rem]">
                     YO GOT YO RISK OPTIMIZED, PERIOD.
                   </h1>
-                  <div className="space-y-3">
+                  <div className="space-y-3 pt-1">
                     <div className="flex flex-wrap gap-3">
                       <a
                         href="https://exponential.fi/"
@@ -1495,7 +1520,7 @@ export const ScanShell = ({
                 </div>
                 <SectionErrorBoundary title="Recommendations">
                   <div ref={recommendationsScrollerRef} className="scrollbar-thin flex snap-x snap-mandatory gap-6 overflow-x-auto pb-3">
-                    {recommendations.map((recommendation) => (
+                    {sortedRecommendations.map((recommendation) => (
                       <RecommendationCard
                         key={`${recommendation.bucket}:${recommendation.vaultAddress}`}
                         recommendation={recommendation}
