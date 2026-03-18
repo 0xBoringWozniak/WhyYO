@@ -3,134 +3,305 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
-import { defaultMethodologyResponse } from "@whyyo/shared";
+import { METHODOLOGY_SECTION_IDS } from "../../components/methodology-link";
 
-import { Card } from "../../components/ui";
-
-const methodologyCards = [
-  {
-    title: "What the engine is solving",
-    body:
-      "Why YO? evaluates each bucket separately and looks for the best next move inside that bucket instead of forcing one portfolio-wide verdict.",
-  },
-  {
-    title: "How intents are chosen",
-    body:
-      "Every recommendation is classified as risk improvement, diversification improvement, or idle deployment. Idle capital is treated as a valid product case, not as missing context.",
-  },
-  {
-    title: "How trust is handled",
-    body:
-      "Low coverage softens wording and CTA pressure, but it does not erase structural improvements that are directly measurable from the data.",
-  },
-  {
-    title: "How CTA works",
-    body:
-      "Strength reflects usefulness, coverage reflects trust, and actionability controls how hard the app should push the move.",
-  },
-];
-
-const recommendationStates = [
-  {
-    title: "Migration",
-    body: "A productive bucket where YO improves covered bucket quality enough to justify a move recommendation.",
-  },
-  {
-    title: "Idle opportunity",
-    body: "An idle or mostly idle bucket where the main benefit is putting capital to work.",
-  },
-  {
-    title: "Informational only",
-    body: "A visible comparison with structural signal, but not enough trust coverage for a strong push.",
-  },
-  {
-    title: "Already in YO / no incremental improvement",
-    body: "A neutral state where the user is already materially allocated or an extra move does not improve the bucket enough.",
-  },
-];
-
-const PRETTY_FORMULAS: Record<string, React.ReactNode> = {
-  bucket_size_usd: <>TV<sub>b</sub> = Σ USD<sub>productive</sub> + Σ USD<sub>idle</sub></>,
-  idle_asset_value_usd: <>IAV<sub>b</sub> = Σ USD<sub>idle</sub></>,
-  idle_share_pct: <>ISR<sub>b</sub> = IAV<sub>b</sub> / TV<sub>b</sub></>,
-  weighted_risk_score: <>WRS<sub>b</sub> = Σ (weight<sub>i</sub> × risk<sub>i</sub>)</>,
-  high_risk_exposure_pct: <>HRE<sub>b</sub> = Σ USD<sub>high-risk</sub> / DIV<sub>b</sub></>,
-  unknown_risk_exposure_pct: <>URE<sub>b</sub> = Σ USD<sub>unknown</sub> / DIV<sub>b</sub></>,
-  risk_coverage_pct: <>Coverage<sub>b</sub> = 1 − URE<sub>b</sub></>,
-  protocol_concentration_hhi: <>HHI<sub>b</sub> = Σ protocol_share<sup>2</sup></>,
-  position_count: <>Npos<sub>b</sub> = count(bucket positions)</>,
-  protocol_overlap_pct: <>PO<sub>b</sub> = Σ min(user_share<sub>p</sub>, yo_share<sub>p</sub>)</>,
-  savings_profile_score:
-    <>SPS<sub>b</sub> = 100 × (1 − weighted penalty from risk, high-risk share, concentration, complexity, unknown risk, and idle share)</>,
-  idle_yield_opportunity_usd: <>IYO<sub>b</sub> = IAV<sub>b</sub></>,
-  estimated_annual_yield_opportunity_usd: <>YCO<sub>b</sub> = IAV<sub>b</sub> × APY<sub>yo</sub></>,
+type FaqItem = {
+  id: string;
+  question: React.ReactNode;
+  answer: React.ReactNode;
 };
 
-const extraProductMetrics = [
+const metricQuestionClass = "font-semibold text-lime";
+
+const methodologyFaq: FaqItem[] = [
   {
-    id: "suggested_amount",
-    label: "Suggested amount",
-    description: "The next move size the engine thinks is worth evaluating inside the bucket.",
-    formula: <>Suggested amount = next move size capped by idle-first and productive-bucket logic</>,
-    units: "USD",
-    whereUsed: ["recommendation card", "execution path"],
-    caveat: "Visible even when the recommendation is cautious or not supported as a direct CTA.",
+    id: "engine",
+    question: "What does WHY YO? compare?",
+    answer: (
+      <p>
+        The engine compares each portfolio bucket separately. It looks at wallet idle balances, productive DeFi
+        positions, and the matching YO vault for that same bucket, then computes deterministic metrics first and adds
+        narrative copy later.
+      </p>
+    ),
   },
   {
-    id: "trust_index",
-    label: "Trust index",
-    description: "A compact user-facing signal for how comfortable the UI should be with the recommendation framing.",
-    formula: <>Trust index = confidence + actionability compressed into Major / Minor / Low</>,
-    units: "label",
-    whereUsed: ["recommendation card", "trust layer"],
-    caveat: "Major = actionable with high confidence. Minor = actionable with medium confidence. Low = cautious or suppressed.",
+    id: "buckets",
+    question: "How do buckets work?",
+    answer: (
+      <p>
+        Everything is split into <span className={metricQuestionClass}>USD</span>,{" "}
+        <span className={metricQuestionClass}>ETH</span>, and <span className={metricQuestionClass}>BTC</span>{" "}
+        buckets. Stablecoins compare only to <span className={metricQuestionClass}>yoUSD</span>, ETH-like assets only
+        to <span className={metricQuestionClass}>yoETH</span>, and BTC-like assets only to{" "}
+        <span className={metricQuestionClass}>yoBTC</span>. Cross-bucket comparisons are not ranked.
+      </p>
+    ),
   },
   {
-    id: "diversification_score",
-    label: "Diversification",
-    description: "A user-facing view of how spread out the productive bucket is across protocols.",
-    formula: <>Diversification = (1 − HHI<sub>b</sub>) × 100</>,
-    units: "percent",
-    whereUsed: ["recommendation card", "bucket overview", "hero summary"],
-    caveat: "Higher is more diversified.",
+    id: "recommendation-states-overview",
+    question: "Recommendation state",
+    answer: (
+      <div className="space-y-3">
+        <p>
+          The engine first detects the primary intent, then chooses the visible recommendation state.
+        </p>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>
+            <span className={metricQuestionClass}>Migration</span>: a productive or mixed bucket where YO improves the
+            modeled structure enough to justify a move.
+          </li>
+          <li>
+            <span className={metricQuestionClass}>Idle opportunity</span>: an idle-heavy bucket where the main gain is
+            deploying undeployed capital.
+          </li>
+          <li>
+            <span className={metricQuestionClass}>Informational only</span>: there is visible signal, but coverage or
+            confidence is not strong enough for a hard push.
+          </li>
+          <li>
+            <span className={metricQuestionClass}>Already in YO / no incremental improvement</span>: the bucket already
+            has meaningful YO exposure or the modeled move does not clear the recommendation bar.
+          </li>
+        </ul>
+      </div>
+    ),
   },
   {
-    id: "vault_high_risk",
-    label: "Vault high-risk",
-    description: "Share of the target YO vault allocated to positions mapped to risk score 3 or higher.",
-    formula: <>Vault high-risk = HRE<sub>yo</sub></>,
-    units: "percent",
-    whereUsed: ["recommendation card", "trust layer"],
-    caveat: "Lower is better. This helps users see how aggressive the target vault is internally.",
+    id: "ranking",
+    question: "How are recommendations ranked?",
+    answer: (
+      <div className="space-y-3">
+        <p>
+          The ranker does not use one universal score anymore. It computes three intent-specific scores and then picks
+          the best fit:
+        </p>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>
+            <span className={metricQuestionClass}>Risk improvement</span>: emphasizes weighted-risk reduction,
+            high-risk reduction, savings-score improvement, diversification, simplicity, and similarity, then subtracts
+            unknown-risk and small-size penalties.
+          </li>
+          <li>
+            <span className={metricQuestionClass}>Diversification improvement</span>: emphasizes diversification gain,
+            concentration problems, strategy fit, and simplification, with smaller risk terms and the same penalty
+            logic.
+          </li>
+          <li>
+            <span className={metricQuestionClass}>Idle deployment</span>: emphasizes idle share, idle USD size,
+            estimated yield opportunity, vault quality, and structure improvement, then penalizes weak coverage and
+            undersized buckets.
+          </li>
+        </ul>
+      </div>
+    ),
   },
   {
-    id: "existing_yo_share",
-    label: "Existing YO share",
-    description: "How much of the current bucket is already allocated to the same YO vault.",
-    formula: <>Existing YO share = USD<sub>current in target YO</sub> / TV<sub>b</sub></>,
-    units: "percent",
-    whereUsed: ["recommendation card", "trust layer"],
-    caveat: "High values raise the bar for incremental recommendations.",
+    id: "coverage-rules",
+    question: "What happens when coverage is low?",
+    answer: (
+      <p>
+        Coverage is a trust input, not just a display number. The trust tile colors current-bucket coverage above{" "}
+        <span className={metricQuestionClass}>60%</span> green, <span className={metricQuestionClass}>30-60%</span>{" "}
+        yellow, and below <span className={metricQuestionClass}>30%</span> red. Recommendation logic is stricter: when
+        unknown exposure across the compared current bucket or target vault gets very high, safety claims are softened,
+        and above roughly <span className={metricQuestionClass}>80%</span> unknown many cases become informational-only
+        unless measured improvement is unusually strong.
+      </p>
+    ),
   },
   {
-    id: "vault_apy",
-    label: "Vault APY",
-    description: "Current APY read for the target YO vault at the moment of the scan.",
-    formula: <>Vault APY = live YO snapshot APY</>,
-    units: "percent",
-    whereUsed: ["recommendation card", "idle profile"],
-    caveat: "Used as an informational input, not a promise.",
+    id: "trust",
+    question: "How does Trust index work?",
+    answer: (
+      <div className="space-y-3">
+        <p>
+          <span className={metricQuestionClass}>Trust index</span> is built from four visible trust metrics:
+          coverage, vault high-risk, YO share, and overlap.
+        </p>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>Each metric is first classified into green, yellow, orange, or red.</li>
+          <li>
+            Coverage uses <span className={metricQuestionClass}>{">"}60%</span> as green and{" "}
+            <span className={metricQuestionClass}>{"<"}30%</span> as red.
+          </li>
+          <li>
+            Vault high-risk uses <span className={metricQuestionClass}>20%</span>,{" "}
+            <span className={metricQuestionClass}>30%</span>, and{" "}
+            <span className={metricQuestionClass}>40%</span> breakpoints.
+          </li>
+          <li>
+            YO share uses <span className={metricQuestionClass}>10%</span>,{" "}
+            <span className={metricQuestionClass}>20%</span>, and{" "}
+            <span className={metricQuestionClass}>30%</span> breakpoints.
+          </li>
+          <li>
+            Overlap uses <span className={metricQuestionClass}>10%</span>,{" "}
+            <span className={metricQuestionClass}>30%</span>, and{" "}
+            <span className={metricQuestionClass}>50%</span> breakpoints.
+          </li>
+          <li>
+            Final label: <span className={metricQuestionClass}>Major</span> if the average score is high and nothing is
+            red, <span className={metricQuestionClass}>Minor</span> if the case is mixed but still usable, otherwise{" "}
+            <span className={metricQuestionClass}>Low</span>.
+          </li>
+        </ul>
+      </div>
+    ),
+  },
+  {
+    id: "suggested-amount-overview",
+    question: "What does Suggested amount mean?",
+    answer: (
+      <p>
+        <span className={metricQuestionClass}>Suggested amount</span> is deterministic. The engine calculates
+        idle-first, high-risk-only, combined, 25%, 50%, and full-bucket presets. The highlighted value uses the
+        combined preset first, then falls back to idle-only, then high-risk-only, then 25% of the bucket. If the whole
+        bucket is under <span className={metricQuestionClass}>$250</span>, it shows the full bucket; otherwise it floors
+        the suggestion at <span className={metricQuestionClass}>$250</span> and caps it at bucket size.
+      </p>
+    ),
+  },
+  {
+    id: "limitations",
+    question: "What are the main limitations?",
+    answer: (
+      <p>
+        Public risk coverage in DeFi is incomplete, wrappers can hide underlying exposures, and APY is only a current
+        snapshot. The app therefore treats yield estimates as informational, keeps unknown-heavy cases visible, and
+        reduces recommendation pressure before making strong safety claims.
+      </p>
+    ),
   },
 ];
 
-const prettifyUsedIn = (items: string[]) => items.slice(0, 3).join(" • ");
+const metricFaq: FaqItem[] = [
+  {
+    id: METHODOLOGY_SECTION_IDS.riskCoverage,
+    question: <span className={metricQuestionClass}>Risk coverage</span>,
+    answer: (
+      <p>
+        Bucket-level coverage tile in the overview cards. It shows what share of productive DeFi capital in the bucket
+        has public risk mapping.
+      </p>
+    ),
+  },
+  {
+    id: METHODOLOGY_SECTION_IDS.diversification,
+    question: <span className={metricQuestionClass}>Diversification</span>,
+    answer: (
+      <p>
+        This is the user-facing inverse of protocol concentration. Higher diversification means the productive DeFi
+        bucket is spread more broadly across protocols rather than concentrated in one place.
+      </p>
+    ),
+  },
+  {
+    id: METHODOLOGY_SECTION_IDS.weightedRisk,
+    question: <span className={metricQuestionClass}>Weighted risk (WRS)</span>,
+    answer: (
+      <p>
+        Average risk score of productive DeFi positions only. Idle balances are excluded so idle wallet assets cannot
+        artificially make a risky DeFi bucket look safer.
+      </p>
+    ),
+  },
+  {
+    id: METHODOLOGY_SECTION_IDS.highRiskExposure,
+    question: <span className={metricQuestionClass}>High-risk exposure (HRE)</span>,
+    answer: (
+      <p>Share of productive DeFi capital sitting in positions mapped to risk score 3 or higher.</p>
+    ),
+  },
+  {
+    id: METHODOLOGY_SECTION_IDS.savingsScore,
+    question: <span className={metricQuestionClass}>Savings score (SPS)</span>,
+    answer: (
+      <p>
+        A heuristic 0-100 quality score. It combines risk, high-risk share, concentration, structural complexity,
+        unknown coverage drag, and idle drag into one user-facing summary. Higher is better, but it is not a forecast.
+      </p>
+    ),
+  },
+  {
+    id: METHODOLOGY_SECTION_IDS.trustIndex,
+    question: <span className={metricQuestionClass}>Trust index</span>,
+    answer: (
+      <p>
+        Compact UI summary of four trust metrics: coverage, vault high-risk, YO share, and overlap. It is not a
+        separate portfolio metric; it is a presentation layer derived from those inputs and compressed into Major,
+        Minor, or Low.
+      </p>
+    ),
+  },
+  {
+    id: METHODOLOGY_SECTION_IDS.coverage,
+    question: <span className={metricQuestionClass}>Coverage</span>,
+    answer: (
+      <p>
+        Trust-layer label for the same underlying coverage metric. In recommendation cards it is shown as a percent and
+        toned by thresholds: above 60% green, 30-60% yellow, below 30% red.
+      </p>
+    ),
+  },
+  {
+    id: METHODOLOGY_SECTION_IDS.yoShare,
+    question: <span className={metricQuestionClass}>YO share</span>,
+    answer: (
+      <p>How much of the current bucket is already allocated to the same target YO vault.</p>
+    ),
+  },
+  {
+    id: METHODOLOGY_SECTION_IDS.vaultHighRisk,
+    question: <span className={metricQuestionClass}>Vault high-risk</span>,
+    answer: (
+      <p>Share of the target YO vault allocated to underlying positions mapped to risk score 3 or higher.</p>
+    ),
+  },
+  {
+    id: METHODOLOGY_SECTION_IDS.overlap,
+    question: <span className={metricQuestionClass}>Overlap</span>,
+    answer: (
+      <p>
+        Overlap between the user&apos;s current productive protocol mix and the target YO vault protocol mix. Lower
+        overlap means YO is taking the bucket to a more different protocol set.
+      </p>
+    ),
+  },
+  {
+    id: METHODOLOGY_SECTION_IDS.recommendationState,
+    question: <span className={metricQuestionClass}>Recommendation state</span>,
+    answer: (
+      <p>
+        User-facing state label in the preview flow that compresses recommendation actionability and strength into{" "}
+        <span className={metricQuestionClass}>Major</span>, <span className={metricQuestionClass}>Minor</span>, or{" "}
+        <span className={metricQuestionClass}>Low</span>.
+      </p>
+    ),
+  },
+];
+
+function FaqToggle({ item, defaultOpen = false }: { item: FaqItem; defaultOpen?: boolean }) {
+  return (
+    <details
+      id={item.id}
+      className="group rounded-[28px] border border-white/10 bg-black/35 p-0 open:border-[#ffd84d]/35 open:bg-black/50"
+      open={defaultOpen}
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4">
+        <div className="text-lg leading-7 text-white">{item.question}</div>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/12 text-xl text-white/75 transition group-open:border-[#ffd84d]/35 group-open:text-[#ffd84d]">
+          <span className="group-open:hidden">+</span>
+          <span className="hidden group-open:inline">−</span>
+        </div>
+      </summary>
+      <div className="border-t border-white/8 px-5 py-4 text-base leading-8 text-white/70">{item.answer}</div>
+    </details>
+  );
+}
 
 export default function MethodologyPage() {
   const router = useRouter();
-  const sections = defaultMethodologyResponse.doc.sections;
-  const metricCards = defaultMethodologyResponse.registry.filter(
-    (metric) => metric.shownInUi || metric.audience.includes("user"),
-  );
   const [returnTo, setReturnTo] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -138,11 +309,28 @@ export default function MethodologyPage() {
     setReturnTo(params.get("returnTo"));
   }, []);
 
+  React.useEffect(() => {
+    const revealHashTarget = () => {
+      const hash = window.location.hash.replace(/^#/, "");
+      if (!hash) return;
+      const element = document.getElementById(hash);
+      if (!(element instanceof HTMLDetailsElement)) return;
+      element.open = true;
+      window.requestAnimationFrame(() => {
+        element.scrollIntoView({ block: "start" });
+      });
+    };
+
+    revealHashTarget();
+    window.addEventListener("hashchange", revealHashTarget);
+    return () => window.removeEventListener("hashchange", revealHashTarget);
+  }, []);
+
   const handleBack = React.useCallback(() => {
     const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
     const liveReturnTo = params?.get("returnTo") ?? returnTo;
     if (liveReturnTo) {
-      router.push(liveReturnTo);
+      window.location.assign(liveReturnTo);
       return;
     }
     if (window.history.length > 1) {
@@ -153,16 +341,23 @@ export default function MethodologyPage() {
   }, [returnTo, router]);
 
   return (
-    <main className="mx-auto max-w-[1500px] space-y-10 px-6 py-10 lg:px-10">
-      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+    <main className="mx-auto max-w-[1240px] space-y-8 px-6 py-10 lg:px-10">
+      <section className="space-y-5">
         <div className="space-y-5">
           <div className="text-sm uppercase tracking-[0.24em] text-white/45">Methodology</div>
           <h1 className="max-w-4xl text-5xl font-semibold leading-tight text-white md:text-6xl">
             How WHY YO? scores your next move
           </h1>
           <p className="max-w-3xl text-lg leading-8 text-white/68">
-            The engine is deterministic. It compares your current bucket with YO using risk, diversification, idle
-            deployment, and trust-aware coverage rules, then decides how strong the action should be.
+            Higher <span className={metricQuestionClass}>Diversification</span> and{" "}
+            <span className={metricQuestionClass}>Savings score</span> are better. Lower{" "}
+            <span className={metricQuestionClass}>Weighted risk</span>,{" "}
+            <span className={metricQuestionClass}>High-risk exposure</span>,{" "}
+            <span className={metricQuestionClass}>Vault high-risk</span>,{" "}
+            <span className={metricQuestionClass}>YO share</span>, and{" "}
+            <span className={metricQuestionClass}>Overlap</span> are better.{" "}
+            <span className={metricQuestionClass}>Risk coverage</span> should be read together with recommendation
+            caution.
           </p>
           <div className="flex flex-wrap gap-3">
             <button
@@ -174,105 +369,24 @@ export default function MethodologyPage() {
             </button>
           </div>
         </div>
-
-        <Card className="flex h-full flex-col space-y-4">
-          <div className="text-sm uppercase tracking-[0.24em] text-white/45">Reading the output</div>
-          <p className="text-base leading-8 text-white/68">
-            Higher diversification and savings score are better. Lower weighted risk, lower high-risk exposure, and
-            lower unknown exposure are better. Idle metrics tell you how much capital is still undeployed.
-          </p>
-        </Card>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
-        {methodologyCards.map((card) => (
-          <Card key={card.title} className="flex h-full flex-col space-y-3">
-            <div className="text-xl font-semibold text-white">{card.title}</div>
-            <p className="text-base leading-7 text-white/68">{card.body}</p>
-          </Card>
-        ))}
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <Card className="flex h-full flex-col space-y-4">
-          <div className="text-sm uppercase tracking-[0.24em] text-white/45">Recommendation states</div>
-          <div className="grid gap-4">
-            {recommendationStates.map((card) => (
-              <div key={card.title} className="rounded-[24px] border border-white/8 bg-black/35 p-5">
-                <div className="text-lg font-semibold text-white">{card.title}</div>
-                <p className="mt-2 text-base leading-7 text-white/65">{card.body}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <div className="space-y-4">
-          {sections
-            .filter((section) =>
-              ["what-we-analyze", "how-buckets-work", "ranking", "limitations"].includes(section.id),
-            )
-            .map((section) => (
-              <Card key={section.id} className="flex h-full flex-col space-y-3">
-                <div className="text-xs uppercase tracking-[0.18em] text-white/45">{section.title}</div>
-                <p className="text-base leading-8 text-white/68">{section.body}</p>
-              </Card>
-            ))}
-        </div>
-      </section>
-
-      <section className="space-y-5">
-        <div className="text-sm uppercase tracking-[0.24em] text-white/45">User-facing metrics</div>
-        <div className="grid auto-rows-fr items-stretch gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          {[...metricCards, ...extraProductMetrics].map((metric) => (
-            <Card key={metric.id} className="flex h-full flex-col space-y-4">
-              <div>
-                <div className="text-xs uppercase tracking-[0.2em] text-white/42">{metric.label}</div>
-                <div className="mt-2 text-lg font-semibold text-white">{metric.description}</div>
-              </div>
-              <div className="flex min-h-[112px] flex-col justify-center rounded-[18px] border border-white/8 bg-black/35 px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.18em] text-white/42">Formula</div>
-                <div className="mt-2 font-mono text-[0.95rem] leading-7 text-white/82">{PRETTY_FORMULAS[metric.id] ?? metric.formula}</div>
-              </div>
-              <div className="space-y-2 text-sm text-white/66">
-                <div>
-                  <span className="text-white/42">Units:</span> {metric.units}
-                </div>
-                <div>
-                  <span className="text-white/42">Used in:</span> {prettifyUsedIn(metric.whereUsed)}
-                </div>
-              </div>
-              {("caveats" in metric && metric.caveats.length > 0) || ("caveat" in metric && metric.caveat) ? (
-                <div className="mt-auto min-h-[96px] rounded-[18px] border border-white/8 bg-black/35 px-4 py-3 text-sm leading-6 text-white/58">
-                  {"caveats" in metric ? metric.caveats[0] : metric.caveat}
-                </div>
-              ) : null}
-            </Card>
+      <section className="space-y-4">
+        <div className="text-sm uppercase tracking-[0.24em] text-white/45">Core FAQ</div>
+        <div className="space-y-3">
+          {methodologyFaq.map((item, index) => (
+            <FaqToggle key={item.id} item={item} defaultOpen={index === 0} />
           ))}
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-3">
-        <Card className="flex h-full flex-col space-y-4">
-          <div className="text-sm uppercase tracking-[0.24em] text-white/45">Trust and caveats</div>
-          <p className="text-base leading-8 text-white/68">
-            Coverage reflects how much of the compared productive capital has public risk mapping. Unknown-heavy cases
-            stay visible, but the app softens the wording before making strong safety claims.
-          </p>
-        </Card>
-        <Card className="flex h-full flex-col space-y-4">
-          <div className="text-sm uppercase tracking-[0.24em] text-white/45">CTA policy</div>
-          <p className="text-base leading-8 text-white/68">
-            Direct deposit is strongest when there is a clean idle route. Productive recommendations can still explain
-            what to move first, but they should not fabricate transactions.
-          </p>
-        </Card>
-        <Card className="flex h-full flex-col space-y-4">
-          <div className="text-sm uppercase tracking-[0.24em] text-white/45">Thinking flow</div>
-          <p className="text-base leading-8 text-white/68">
-            The product opens with WHY YO?, then wallet capture, then a thinking screen while positions, risk, and
-            recommendations are computed. The dashboard appears only after the scan payload is ready.
-          </p>
-        </Card>
+      <section className="space-y-4">
+        <div className="text-sm uppercase tracking-[0.24em] text-white/45">Metrics FAQ</div>
+        <div className="space-y-3">
+          {metricFaq.map((item) => (
+            <FaqToggle key={item.id} item={item} />
+          ))}
+        </div>
       </section>
     </main>
   );

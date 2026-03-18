@@ -1,8 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 
@@ -14,8 +13,9 @@ import { reportClientError } from "../lib/client-error-reporting";
 import { cn, formatPct, formatUsd } from "../lib/utils";
 import { useScanStore } from "../store/use-scan-store";
 import { AssetIcon } from "./asset-icon";
+import { MethodologyLink, METHODOLOGY_SECTION_IDS, restoreDashboardScrollFromUrl } from "./methodology-link";
 import { BeforeAfterBars, CompositionCompare, SimplificationVisual, StackedBar } from "./metrics-visuals";
-import { Badge, Button, Card, InfoTooltip } from "./ui";
+import { Badge, Button, Card } from "./ui";
 import { DepositDrawer } from "./yo-deposit-drawer";
 
 const scanningSteps = [
@@ -44,7 +44,6 @@ const thinkingPhrases = [
 ];
 
 const formatCoverage = (value: number | null) => (value === null ? "n/a" : formatPct(value * 100));
-const formatCoveragePct = (value: number | null) => (value === null ? "n/a" : formatPct(value));
 const formatDiversification = (value: number | null) => (value === null ? "n/a" : formatPct((1 - value) * 100));
 const shortenAddress = (value?: string) => (value ? `${value.slice(0, 6)}...${value.slice(-4)}` : "Not connected");
 const formatReadableValue = (value: number | null, formatter: (value: number) => string, fallback: string) =>
@@ -260,65 +259,100 @@ const toImprovementLabel = (recommendation: RankedRecommendation) => {
   return "Minor portfolio improvement available";
 };
 
-const getRecommendationSummary = (recommendation: RankedRecommendation) =>
-  recommendation.llmExplanation?.summary ??
-  `Suggested move ${formatUsd(recommendation.suggestedUsd)}. Weighted risk ${formatMetricNumber(recommendation.metrics.weightedRiskBefore)} -> ${formatMetricNumber(recommendation.metrics.weightedRiskAfter)}, savings ${formatMetricNumber(recommendation.metrics.savingsScoreBefore)} -> ${formatMetricNumber(recommendation.metrics.savingsScoreAfter)}, diversification ${formatReadableValue(
-    recommendation.visualization.beforeAfterBars.find((bar) => bar.key === "diversification_score")?.after ?? null,
-    (value) => formatPct(value),
-    "n/a",
-  )}.`;
+const LINKABLE_METRIC_PHRASES: Array<{ phrase: string; sectionId: string }> = [
+  { phrase: "High-risk exposure", sectionId: METHODOLOGY_SECTION_IDS.highRiskExposure },
+  { phrase: "Weighted risk", sectionId: METHODOLOGY_SECTION_IDS.weightedRisk },
+  { phrase: "Savings score", sectionId: METHODOLOGY_SECTION_IDS.savingsScore },
+  { phrase: "Diversification", sectionId: METHODOLOGY_SECTION_IDS.diversification },
+  { phrase: "Risk coverage", sectionId: METHODOLOGY_SECTION_IDS.riskCoverage },
+  { phrase: "Trust index", sectionId: METHODOLOGY_SECTION_IDS.trustIndex },
+  { phrase: "Recommendation state", sectionId: METHODOLOGY_SECTION_IDS.recommendationState },
+  { phrase: "Protocol overlap", sectionId: METHODOLOGY_SECTION_IDS.overlap },
+  { phrase: "Overlap", sectionId: METHODOLOGY_SECTION_IDS.overlap },
+  { phrase: "Existing YO share", sectionId: METHODOLOGY_SECTION_IDS.yoShare },
+  { phrase: "YO share", sectionId: METHODOLOGY_SECTION_IDS.yoShare },
+  { phrase: "Vault high-risk", sectionId: METHODOLOGY_SECTION_IDS.vaultHighRisk },
+  { phrase: "Coverage", sectionId: METHODOLOGY_SECTION_IDS.coverage },
+].sort((left, right) => right.phrase.length - left.phrase.length);
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const renderLinkedMetricText = (text: string) => {
+  if (!text) return text;
+
+  const pattern = new RegExp(LINKABLE_METRIC_PHRASES.map(({ phrase }) => escapeRegExp(phrase)).join("|"), "g");
+  const parts = text.split(pattern);
+  const matches = text.match(pattern) ?? [];
+  const nodes: React.ReactNode[] = [];
+
+  for (let index = 0; index < parts.length; index += 1) {
+    const part = parts[index];
+    if (part) {
+      nodes.push(<React.Fragment key={`text-${index}`}>{part}</React.Fragment>);
+    }
+
+    const match = matches[index];
+    if (!match) continue;
+
+    const metric = LINKABLE_METRIC_PHRASES.find(({ phrase }) => phrase === match);
+    if (!metric) {
+      nodes.push(<React.Fragment key={`match-${index}`}>{match}</React.Fragment>);
+      continue;
+    }
+
+    nodes.push(
+      <MethodologyLink key={`match-${index}`} sectionId={metric.sectionId}>
+        {match}
+      </MethodologyLink>,
+    );
+  }
+
+  return nodes;
+};
+
+const getRecommendationSummary = (recommendation: RankedRecommendation) => (
+  recommendation.llmExplanation?.summary ? (
+    <>{renderLinkedMetricText(recommendation.llmExplanation.summary)}</>
+  ) : (
+    <>
+      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.weightedRisk}>Weighted risk</MethodologyLink>{" "}
+      {formatMetricNumber(recommendation.metrics.weightedRiskBefore)} {"->"}{" "}
+      {formatMetricNumber(recommendation.metrics.weightedRiskAfter)},{" "}
+      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.savingsScore}>Savings score</MethodologyLink>{" "}
+      {formatMetricNumber(recommendation.metrics.savingsScoreBefore)} {"->"}{" "}
+      {formatMetricNumber(recommendation.metrics.savingsScoreAfter)},{" "}
+      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.diversification}>Diversification</MethodologyLink>{" "}
+      {formatReadableValue(
+        recommendation.visualization.beforeAfterBars.find((bar) => bar.key === "diversification_score")?.after ?? null,
+        (value) => formatPct(value),
+        "n/a",
+      )}
+      .
+    </>
+  )
+);
 
 const getRecommendationBullets = (recommendation: RankedRecommendation) => {
-  if (recommendation.llmExplanation?.bullets?.length) return recommendation.llmExplanation.bullets;
+  if (recommendation.llmExplanation?.bullets?.length) {
+    return recommendation.llmExplanation.bullets.map((bullet, index) => (
+      <React.Fragment key={`llm-bullet-${index}`}>{renderLinkedMetricText(bullet)}</React.Fragment>
+    ));
+  }
 
   return [
-    `High-risk exposure ${formatReadableValue(recommendation.metrics.highRiskBeforePct, (value) => formatPct(value * 100), "n/a")} -> ${formatReadableValue(recommendation.metrics.highRiskAfterPct, (value) => formatPct(value * 100), "n/a")}.`,
-    `Protocol overlap ${formatPct(recommendation.metrics.protocolOverlapPct)} and existing YO share ${formatPct(
-      recommendation.metrics.existingYoSharePct * 100,
-    )}.`,
-    `Vault APY ${formatPct(recommendation.metrics.vaultApyPct)} with unknown vault exposure ${formatReadableValue(
-      recommendation.metrics.vaultUnknownRiskExposurePct,
-      formatPct,
-      "n/a",
-    )}.`,
+    <>
+      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.highRiskExposure}>High-risk exposure</MethodologyLink>{" "}
+      {formatReadableValue(recommendation.metrics.highRiskBeforePct, (value) => formatPct(value * 100), "n/a")} {"->"}{" "}
+      {formatReadableValue(recommendation.metrics.highRiskAfterPct, (value) => formatPct(value * 100), "n/a")}.
+    </>,
+    <>
+      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.overlap}>Overlap</MethodologyLink>{" "}
+      {formatPct(recommendation.metrics.protocolOverlapPct)} and{" "}
+      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.yoShare}>YO share</MethodologyLink>{" "}
+      {formatPct(recommendation.metrics.existingYoSharePct * 100)}.
+    </>,
   ];
 };
-
-const getMethodologyHref = ({
-  pathname,
-  initialWalletAddress,
-  activeWalletAddress,
-}: {
-  pathname: string;
-  initialWalletAddress?: string;
-  activeWalletAddress?: string;
-}) => {
-  const returnTo = initialWalletAddress ? pathname : activeWalletAddress ? "/?resume=1" : "";
-  return returnTo ? `/methodology?returnTo=${encodeURIComponent(returnTo)}` : "/methodology";
-};
-
-const TRUST_METRICS = [
-  {
-    key: "coverage",
-    label: "Risk coverage",
-    tooltip: "How much of the compared productive bucket has mapped public risk data.",
-  },
-  {
-    key: "vault_high_risk",
-    label: "Vault high-risk",
-    tooltip: "Share of YO vault allocations mapped to risk score 3 or higher.",
-  },
-  {
-    key: "existing_yo",
-    label: "Existing YO share",
-    tooltip: "How much of the bucket is already allocated to this target YO vault.",
-  },
-  {
-    key: "overlap",
-    label: "Protocol overlap",
-    tooltip: "How much the current bucket already overlaps with the target YO protocol set.",
-  },
-] as const;
 
 const buildIdleSourcePlan = ({
   recommendation,
@@ -445,12 +479,10 @@ const getBucketProtocols = (protocols: CanonicalProtocolExposure[], bucket: stri
 const SectionTitle = ({
   eyebrow,
   title,
-  tooltip,
   action,
 }: {
   eyebrow?: string;
   title: string;
-  tooltip?: string;
   action?: React.ReactNode;
 }) => (
   <div className="flex flex-wrap items-center justify-between gap-4">
@@ -458,7 +490,6 @@ const SectionTitle = ({
       {eyebrow ? <div className="text-xs uppercase tracking-[0.22em] text-white/40">{eyebrow}</div> : null}
       <div className="mt-2 flex items-center gap-3">
         <h2 className="yo-display text-[2.5rem] leading-none text-white md:text-[3.5rem]">{title}</h2>
-        {tooltip ? <InfoTooltip content={tooltip} /> : null}
       </div>
     </div>
     {action}
@@ -468,14 +499,12 @@ const SectionTitle = ({
 const StatBlock = ({
   label,
   value,
-  tooltip,
   emphasis = false,
   valueClassName,
   labelClassName,
 }: {
   label: string;
   value: string;
-  tooltip?: string;
   emphasis?: boolean;
   valueClassName?: string;
   labelClassName?: string;
@@ -483,7 +512,6 @@ const StatBlock = ({
   <div className="space-y-2">
     <div className={cn("flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/42", labelClassName)}>
       <span>{label}</span>
-      {tooltip ? <InfoTooltip content={tooltip} /> : null}
     </div>
     <div className={cn("font-display leading-none text-white", emphasis ? "text-6xl" : "text-4xl", valueClassName)}>{value}</div>
   </div>
@@ -707,11 +735,15 @@ const BucketOverviewCard = ({
         <div className="mt-1 text-white">{formatUsd(bucket.idleAssetUsd)}</div>
       </div>
       <div>
-        <div className="text-white/62">Risk coverage</div>
+        <div className="text-white/62">
+          <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.riskCoverage}>Risk coverage</MethodologyLink>
+        </div>
         <div className="mt-1 text-white">{formatCoverage(bucket.riskCoveragePct)}</div>
       </div>
       <div>
-        <div className="text-white/62">Diversification</div>
+        <div className="text-white/62">
+          <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.diversification}>Diversification</MethodologyLink>
+        </div>
         <div className="mt-1 text-white">{formatDiversification(bucket.protocolHHI)}</div>
       </div>
       <div>
@@ -867,40 +899,35 @@ const RecommendationCard = ({
       <div className="space-y-3 px-4 py-4">
         <div className="grid gap-3 xl:grid-cols-[1.02fr_0.98fr]">
           <div className="space-y-3 rounded-[26px] border border-white/8 bg-[#121212] p-4">
-            <div className="mb-4 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/42">
-              <span>{recommendation.showBeforeAfterBars ? "Modeled comparison" : "Idle opportunity profile"}</span>
-              <InfoTooltip content="This block shows the metrics that are actually valid for the current recommendation type. Idle buckets do not fake a before-vs-after DeFi baseline." />
+            <div className="mb-4 text-xs uppercase tracking-[0.2em] text-white/42">
+              {recommendation.showBeforeAfterBars ? "Modeled comparison" : "Idle opportunity profile"}
             </div>
             {recommendation.showBeforeAfterBars ? <BeforeAfterBars metrics={recommendation.visualization.beforeAfterBars} /> : null}
             <div className={cn("grid gap-3", recommendation.showIdleOpportunityVisual ? "md:grid-cols-2" : "md:grid-cols-1")}>
               {recommendation.showIdleOpportunityVisual ? (
                 <div className="rounded-[22px] border border-white/8 bg-black/35 p-4">
-                  <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/42">
-                    <span>Idle profile</span>
-                    <InfoTooltip content="Idle capital available right now and the vault-side yield/risk read for deploying it." />
-                  </div>
+                  <div className="text-xs uppercase tracking-[0.2em] text-white/42">Idle profile</div>
                   <div className="mt-4 space-y-4">
                     <StackedBar segments={recommendation.visualization.idleVsInvestedBar} />
                     <div className="grid gap-2 text-[0.96rem] text-white/74">
-                      <div className="flex items-center gap-2"><span>Idle capital {formatUsd(recommendation.metrics.idleAssetUsd)}</span><InfoTooltip content="Wallet capital not currently sitting in productive DeFi positions." /></div>
-                      <div className="flex items-center gap-2"><span>Est. annual yield {formatUsd(recommendation.metrics.estimatedAnnualYieldOpportunityUsd ?? 0)}</span><InfoTooltip content="Simple one-year yield estimate using current vault APY, not a promise." /></div>
-                      <div className="flex items-center gap-2"><span>Vault APY {formatPct(recommendation.metrics.vaultApyPct)}</span><InfoTooltip content="Current vault APY used as the deployment reference." /></div>
-                      <div className="flex items-center gap-2"><span>Vault high-risk {recommendation.metrics.vaultHighRiskExposurePct === null ? "n/a" : formatPct(recommendation.metrics.vaultHighRiskExposurePct)}</span><InfoTooltip content="Share of YO vault allocations mapped to risk score 3 or higher." /></div>
+                      <div>Idle capital {formatUsd(recommendation.metrics.idleAssetUsd)}</div>
+                      <div>Est. annual yield {formatUsd(recommendation.metrics.estimatedAnnualYieldOpportunityUsd ?? 0)}</div>
+                      <div>Vault APY {formatPct(recommendation.metrics.vaultApyPct)}</div>
+                      <div>
+                        <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.vaultHighRisk}>Vault high-risk</MethodologyLink>{" "}
+                        {recommendation.metrics.vaultHighRiskExposurePct === null ? "n/a" : formatPct(recommendation.metrics.vaultHighRiskExposurePct)}
+                      </div>
                     </div>
                   </div>
                 </div>
               ) : null}
 
               <div className="rounded-[22px] border border-white/8 bg-black/35 p-4">
-                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/42">
-                  <span>Trust layer</span>
-                  <InfoTooltip content="Coverage and overlap metrics that determine how hard the UI should push the move." />
-                </div>
+                <div className="text-xs uppercase tracking-[0.2em] text-white/42">Trust layer</div>
                 <div className="mt-4 space-y-3">
                   <div className="flex items-center justify-between rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
-                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-white/42">
-                      <span>Trust index</span>
-                      <InfoTooltip content="Compact UI label derived from confidence and actionability. Major means the case is strong and trusted enough to push harder, Minor means useful but softer, Low means stay cautious." />
+                    <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+                      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.trustIndex}>Trust index</MethodologyLink>
                     </div>
                     <span className={cn("inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]", trustIndex.className)}>
                       {trustIndex.label}
@@ -908,30 +935,26 @@ const RecommendationCard = ({
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
-                      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-white/42">
-                        <span>Coverage</span>
-                        <InfoTooltip content={TRUST_METRICS[0].tooltip} />
+                      <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+                        <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.coverage}>Coverage</MethodologyLink>
                       </div>
                       <div className={cn("mt-2 text-xl font-semibold", coverageTone)}>{formatReadableValue(recommendation.metrics.coveragePct, formatPct, "n/a")}</div>
                     </div>
                     <div className="rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
-                      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-white/42">
-                        <span>Vault high-risk</span>
-                        <InfoTooltip content={TRUST_METRICS[1].tooltip} />
+                      <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+                        <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.vaultHighRisk}>Vault high-risk</MethodologyLink>
                       </div>
                       <div className={cn("mt-2 text-xl font-semibold", vaultHighRiskTone)}>{formatReadableValue(recommendation.metrics.vaultHighRiskExposurePct, formatPct, "n/a")}</div>
                     </div>
                     <div className="rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
-                      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-white/42">
-                        <span>YO share</span>
-                        <InfoTooltip content={TRUST_METRICS[2].tooltip} />
+                      <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+                        <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.yoShare}>YO share</MethodologyLink>
                       </div>
                       <div className={cn("mt-2 text-xl font-semibold", existingYoShareTone)}>{formatPct(recommendation.metrics.existingYoSharePct * 100)}</div>
                     </div>
                     <div className="rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
-                      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-white/42">
-                        <span>Overlap</span>
-                        <InfoTooltip content={TRUST_METRICS[3].tooltip} />
+                      <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+                        <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.overlap}>Overlap</MethodologyLink>
                       </div>
                       <div className={cn("mt-2 text-xl font-semibold", overlapTone)}>{formatPct(recommendation.metrics.protocolOverlapPct)}</div>
                     </div>
@@ -943,16 +966,13 @@ const RecommendationCard = ({
 
           <div className="rounded-[26px] border border-white/8 bg-[#121212] p-4">
             <div className="flex h-full flex-col">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/42">
-                <span>Suggested amount</span>
-                <InfoTooltip content="This is the recommendation-sized move the engine thinks is worth evaluating next. It is not a guaranteed execution size." />
-              </div>
+              <div className="text-xs uppercase tracking-[0.2em] text-white/42">Suggested amount</div>
               <div className="mt-3 font-display text-[3rem] leading-none text-lime">{formatUsd(recommendation.suggestedUsd)}</div>
               <div className="mt-3 text-[1rem] leading-7 text-white/78">{getRecommendationSummary(recommendation)}</div>
               {displayedBullets.length ? (
                 <ul className="mt-2 space-y-2 text-[0.98rem] leading-7 text-white/72">
-                  {displayedBullets.map((bullet) => (
-                    <li key={bullet} className="flex gap-2">
+                  {displayedBullets.map((bullet, index) => (
+                    <li key={index} className="flex gap-2">
                       <span className="text-lime">•</span>
                       <span>{bullet}</span>
                     </li>
@@ -1023,14 +1043,21 @@ export const ScanShell = ({
   const [canScrollRecommendationsPrev, setCanScrollRecommendationsPrev] = React.useState(false);
   const [canScrollRecommendationsNext, setCanScrollRecommendationsNext] = React.useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   const activeWalletAddress = initialWalletAddress ?? address ?? "";
   const activeWalletLabel = initialWalletAddress ? "Guest address" : address ? "Connected wallet" : "Wallet";
-  const methodologyHref = getMethodologyHref({
-    pathname,
-    ...(initialWalletAddress ? { initialWalletAddress } : {}),
-    ...(activeWalletAddress ? { activeWalletAddress } : {}),
-  });
+  React.useEffect(() => {
+    restoreDashboardScrollFromUrl();
+  }, []);
+
+  const openMethodologyPage = React.useCallback(() => {
+    const currentPath = `${pathname}${typeof window !== "undefined" ? window.location.search : ""}`;
+    const returnTo = `${currentPath}${currentPath.includes("?") ? "&" : "?"}scrollY=${encodeURIComponent(
+      String(typeof window !== "undefined" ? window.scrollY : 0),
+    )}`;
+    router.push(`/methodology?returnTo=${encodeURIComponent(returnTo)}`);
+  }, [pathname, router]);
 
   const mutation = useMutation({
     mutationFn: async (walletAddress: string) => startScan(walletAddress),
@@ -1226,11 +1253,14 @@ export const ScanShell = ({
                     </a>
                   </div>
                   <div className="flex flex-wrap gap-3">
-                    <Link href={methodologyHref}>
-                      <Button variant="secondary" className="border border-black/10 bg-black text-white hover:bg-black/85">
-                        Methodology
-                      </Button>
-                    </Link>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="border border-black/10 bg-black text-white hover:bg-black/85"
+                      onClick={openMethodologyPage}
+                    >
+                      Methodology
+                    </Button>
                     {scan && activeWalletAddress ? (
                       <Button
                         variant="secondary"
@@ -1260,19 +1290,13 @@ export const ScanShell = ({
                 </Card>
 
                 <Card className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-white/42">
-                    <span>Analyzed value</span>
-                    <InfoTooltip content="Value included in deterministic recommendation scoring after normalization." />
-                  </div>
+                  <div className="text-xs uppercase tracking-[0.22em] text-white/42">Analyzed value</div>
                   <div className="font-display text-5xl leading-none text-lime">{formatUsd(scan?.portfolioOverview.analyzedUsd ?? 0)}</div>
                   <p className="text-base leading-7 text-white/62">Capital included in scoring.</p>
                 </Card>
 
                 <Card className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-white/42">
-                    <span>Deployable now</span>
-                    <InfoTooltip content="Idle capital currently available to be put to work." />
-                  </div>
+                  <div className="text-xs uppercase tracking-[0.22em] text-white/42">Deployable now</div>
                   <div className="font-display text-5xl leading-none text-lime">{formatUsd(deployableUsd)}</div>
                   <p className="text-base leading-7 text-white/62">Idle capital ready to move.</p>
                 </Card>
@@ -1300,7 +1324,6 @@ export const ScanShell = ({
               <SectionTitle
                 eyebrow="Live pipeline"
                 title="SCANNING WALLET"
-                tooltip="The scan pipeline classifies positions, computes bucket metrics, and builds recommendation cards without requiring a manual Start button."
               />
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                 {scanningSteps.map((step, index) => (
@@ -1323,9 +1346,13 @@ export const ScanShell = ({
                 <SectionTitle
                   title="BUCKET OVERVIEW"
                   action={
-                    <Link href={methodologyHref} className="text-sm uppercase tracking-[0.18em] text-lime">
+                    <button
+                      type="button"
+                      onClick={openMethodologyPage}
+                      className="text-sm uppercase tracking-[0.18em] text-lime underline decoration-lime/45 underline-offset-4"
+                    >
                       Open methodology
-                    </Link>
+                    </button>
                   }
                 />
                 <div className="grid items-start gap-4 xl:grid-cols-4">
@@ -1398,10 +1425,7 @@ export const ScanShell = ({
           ) : (
             <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
               <Card className="space-y-5">
-                <SectionTitle
-                  title="FEATURED YO VAULTS"
-                  tooltip="YO vaults are the target destinations the engine compares against your current bucket setup."
-                />
+                <SectionTitle title="FEATURED YO VAULTS" />
                 <div className="grid gap-4 md:grid-cols-3">
                   {["yoUSD", "yoETH", "yoBTC"].map((vaultSymbol) => (
                     <div key={vaultSymbol} className="rounded-[28px] border border-white/10 bg-black/45 p-5">
@@ -1426,10 +1450,7 @@ export const ScanShell = ({
               </Card>
 
               <Card className="space-y-5">
-                <SectionTitle
-                  title="HOW IT WORKS"
-                  tooltip="The dashboard is designed to auto-start scans after the intro boot sequence instead of relying on a separate Start button."
-                />
+                <SectionTitle title="HOW IT WORKS" />
                 <div className="grid gap-4 md:grid-cols-3">
                   {[
                     "Tap the WHY YO? intro cell to power on the dashboard and trigger scan mode.",

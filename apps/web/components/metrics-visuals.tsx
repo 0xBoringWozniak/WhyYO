@@ -3,14 +3,7 @@
 import type { RankedRecommendation } from "@whyyo/shared";
 
 import { cn, formatPct, formatUsd } from "../lib/utils";
-import { InfoTooltip } from "./ui";
-
-const METRIC_TOOLTIPS: Partial<Record<RankedRecommendation["visualization"]["beforeAfterBars"][number]["key"], string>> = {
-  weighted_risk: "Weighted average risk score across the productive positions being compared. Lower is better.",
-  high_risk_exposure: "Share of the bucket sitting in high-risk strategies. Lower is better.",
-  savings_score: "Composite savings-quality score used by the engine. Higher is better.",
-  diversification_score: "How diversified the bucket is across protocols and strategies. Higher is better.",
-};
+import { MethodologyLink, METHODOLOGY_SECTION_IDS } from "./methodology-link";
 
 const formatMetricValue = (value: number | null, format: "number" | "percent" | "currency"): string => {
   if (value === null) return "n/a";
@@ -47,6 +40,13 @@ export const BeforeAfterBars = ({
 }: {
   metrics: RankedRecommendation["visualization"]["beforeAfterBars"];
 }) => {
+  const sectionIdByMetricKey: Partial<Record<RankedRecommendation["visualization"]["beforeAfterBars"][number]["key"], string>> = {
+    weighted_risk: METHODOLOGY_SECTION_IDS.weightedRisk,
+    high_risk_exposure: METHODOLOGY_SECTION_IDS.highRiskExposure,
+    savings_score: METHODOLOGY_SECTION_IDS.savingsScore,
+    diversification_score: METHODOLOGY_SECTION_IDS.diversification,
+  };
+
   return (
     <div className="space-y-5">
       {metrics.map((metric) => {
@@ -56,8 +56,11 @@ export const BeforeAfterBars = ({
           <div key={metric.key} className="space-y-3">
             <div className="flex items-center justify-between text-base">
               <span className="flex items-center gap-2 font-medium text-white/82">
-                <span>{metric.label}</span>
-                {METRIC_TOOLTIPS[metric.key] ? <InfoTooltip content={METRIC_TOOLTIPS[metric.key]} /> : null}
+                {sectionIdByMetricKey[metric.key] ? (
+                  <MethodologyLink sectionId={sectionIdByMetricKey[metric.key] ?? ""}>{metric.label}</MethodologyLink>
+                ) : (
+                  <span>{metric.label}</span>
+                )}
               </span>
               <span
                 className={cn(

@@ -8,7 +8,8 @@ import { getVaultAccent, getVaultLogoUrl } from "../lib/brand-assets";
 import { useYoAllowance, useYoApprove, useYoDeposit } from "../lib/yo-sdk";
 import { cn, formatPct, formatUsd } from "../lib/utils";
 import { AssetIcon } from "./asset-icon";
-import { Button, Card, InfoTooltip } from "./ui";
+import { MethodologyLink, METHODOLOGY_SECTION_IDS } from "./methodology-link";
+import { Button, Card } from "./ui";
 
 type IdleSourcePlan = {
   symbol: string;
@@ -49,6 +50,17 @@ const getExecutionStateLabel = (recommendation: RankedRecommendation) => {
 };
 
 const MetricHighlight = ({ children }: { children: React.ReactNode }) => <span className="font-semibold text-lime">{children}</span>;
+const MetricHighlightLink = ({
+  sectionId,
+  children,
+}: {
+  sectionId: string;
+  children: React.ReactNode;
+}) => (
+  <MethodologyLink sectionId={sectionId} className="font-semibold text-lime decoration-lime/45 hover:decoration-lime">
+    {children}
+  </MethodologyLink>
+);
 
 const toTokenUnits = (value: string, decimals: number): bigint | null => {
   const normalized = value.trim();
@@ -324,9 +336,8 @@ export const DepositDrawer = ({
                   className="h-16 w-16 border-transparent"
                 />
                 <div>
-                  <div className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-white/45">
-                    <span>{isIdleExecution ? "Idle deposit route" : "Portfolio move plan"}</span>
-                    <InfoTooltip content="Idle recommendations can route directly into YO. Productive-bucket recommendations show what to withdraw first, but do not fabricate transactions." />
+                  <div className="text-xs uppercase tracking-[0.22em] text-white/45">
+                    {isIdleExecution ? "Idle deposit route" : "Portfolio move plan"}
                   </div>
                   <h3 className="mt-2 text-3xl font-semibold text-white">{recommendation.vaultSymbol}</h3>
                   <div className="mt-2 text-base text-white/58">
@@ -338,20 +349,19 @@ export const DepositDrawer = ({
 
             <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
               <div className="space-y-3 rounded-[26px] border border-white/8 bg-[#171717] p-4">
-                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/42">
-                  <span>{isIdleExecution ? "Execution path" : "Recommended move path"}</span>
-                  <InfoTooltip content="The suggested amount is already capped to a sensible next move. Idle execution is additionally clamped by available balance in the selected source asset." />
-                </div>
+                <div className="text-xs uppercase tracking-[0.2em] text-white/42">{isIdleExecution ? "Execution path" : "Recommended move path"}</div>
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="rounded-[22px] border border-white/10 bg-black/35 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-white/38">Suggested USD</div>
+                    <div className="text-xs uppercase tracking-[0.18em] text-white/38">Suggested amount</div>
                     <div className="mt-3 font-display text-5xl leading-none text-lime">
                       {formatUsd(isIdleExecution ? idleSourcePlan?.recommendedUsd ?? recommendation.suggestedUsd : recommendation.suggestedUsd)}
                     </div>
                   </div>
                   <div className="rounded-[22px] border border-white/10 bg-black/35 p-4">
-                    <div className="text-xs uppercase tracking-[0.18em] text-white/38">Recommendation state</div>
+                    <div className="text-xs uppercase tracking-[0.18em] text-white/38">
+                      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.recommendationState}>Recommendation state</MethodologyLink>
+                    </div>
                     <div
                       className={cn(
                         "mt-3 text-3xl font-semibold",
@@ -450,10 +460,7 @@ export const DepositDrawer = ({
 
                 {withdrawalPlan.length > 0 ? (
                 <div className="space-y-3 rounded-[22px] border border-white/10 bg-black/35 p-4">
-                  <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-white/40">
-                    <span>Withdraw from current protocols first</span>
-                      <InfoTooltip content="For non-idle recommendations, the app should show which current productive positions are the cleanest source of capital. Execution stays manual on purpose." />
-                    </div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-white/40">Withdraw from current protocols first</div>
                     {withdrawalPlan.map((item) => (
                       <div
                         key={`${item.protocolName}:${item.chain}:${item.usdValue}`}
@@ -487,10 +494,7 @@ export const DepositDrawer = ({
               </div>
 
               <div className="space-y-3 rounded-[26px] border border-white/8 bg-[#171717] p-4">
-                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-white/42">
-                  <span>Why it may make sense</span>
-                  <InfoTooltip content="This section repeats the recommendation semantics in execution language so the user sees why the move exists before clicking deposit." />
-                </div>
+                <div className="text-xs uppercase tracking-[0.2em] text-white/42">Why it may make sense</div>
 
                 <div className="rounded-[22px] border border-white/10 bg-black/35 p-4 text-[1.02rem] leading-8 text-white/78">
                   {recommendation.recommendationType === "no_incremental_improvement" ? (
@@ -498,7 +502,9 @@ export const DepositDrawer = ({
                       <p>
                       A modeled <MetricHighlight>{formatUsd(recommendation.suggestedUsd)}</MetricHighlight> shift would improve concentration{" "}
                       {hhiDelta ? <MetricHighlight>(HHI {hhiDelta}{hhiReductionPct !== null ? `, ${formatPct(hhiReductionPct)} lower` : ""})</MetricHighlight> : null},
-                      but weighted risk {wrsDelta ? <MetricHighlight>{wrsDelta}</MetricHighlight> : "n/a"} and savings{" "}
+                      but <MetricHighlightLink sectionId={METHODOLOGY_SECTION_IDS.weightedRisk}>Weighted risk</MetricHighlightLink>{" "}
+                      {wrsDelta ? <MetricHighlight>{wrsDelta}</MetricHighlight> : "n/a"} and{" "}
+                      <MetricHighlightLink sectionId={METHODOLOGY_SECTION_IDS.savingsScore}>Savings score</MetricHighlightLink>{" "}
                       {savingsDelta ? <MetricHighlight>{savingsDelta}</MetricHighlight> : "n/a"} stay below the bar.
                       </p>
                       <p className="text-white/66">
@@ -512,12 +518,12 @@ export const DepositDrawer = ({
                     <div className="space-y-3">
                       <p>
                       About <MetricHighlight>{formatUsd(idleSourcePlan?.recommendedUsd ?? recommendation.suggestedUsd)}</MetricHighlight> is idle right now.
-                      Deploying it into {recommendation.vaultSymbol} points to an estimated annual yield of{" "}
+                      Deploying it into {recommendation.vaultSymbol} points to estimated annual yield of{" "}
                       <MetricHighlight>{formatUsd(recommendation.metrics.estimatedAnnualYieldOpportunityUsd ?? 0)}</MetricHighlight> at{" "}
-                      <MetricHighlight>{formatPct(recommendation.metrics.vaultApyPct)}</MetricHighlight>.
+                      <MetricHighlight>{formatPct(recommendation.metrics.vaultApyPct)}</MetricHighlight> vault APY.
                       </p>
                       <p className="text-white/66">
-                        The case gets stronger when idle capital is meaningful, overlap is limited, and the target YO mix improves diversification without adding too much new high-risk exposure.
+                        The case gets stronger when idle capital is meaningful, <MetricHighlightLink sectionId={METHODOLOGY_SECTION_IDS.overlap}>Overlap</MetricHighlightLink> is limited, and the target YO mix improves <MetricHighlightLink sectionId={METHODOLOGY_SECTION_IDS.diversification}>Diversification</MetricHighlightLink> without adding too much new <MetricHighlightLink sectionId={METHODOLOGY_SECTION_IDS.vaultHighRisk}>Vault high-risk</MetricHighlightLink>.
                       </p>
                       <p className="text-white/66">
                         That makes this closer to a capital-activation decision than a full portfolio rewrite: the user keeps the same bucket, but the idle share starts earning inside a broader YO allocation mix.
@@ -528,14 +534,14 @@ export const DepositDrawer = ({
                       <p>
                       A modeled <MetricHighlight>{formatUsd(recommendation.suggestedUsd)}</MetricHighlight> shift improves concentration{" "}
                       {hhiDelta ? <MetricHighlight>(HHI {hhiDelta})</MetricHighlight> : null}
-                      {wrsDelta ? <> and weighted risk <MetricHighlight>{wrsDelta}</MetricHighlight></> : null}
-                      {savingsDelta ? <> while savings moves to <MetricHighlight>{savingsDelta}</MetricHighlight></> : null}.
+                      {wrsDelta ? <> and <MetricHighlightLink sectionId={METHODOLOGY_SECTION_IDS.weightedRisk}>Weighted risk</MetricHighlightLink> <MetricHighlight>{wrsDelta}</MetricHighlight></> : null}
+                      {savingsDelta ? <> while <MetricHighlightLink sectionId={METHODOLOGY_SECTION_IDS.savingsScore}>Savings score</MetricHighlightLink> moves to <MetricHighlight>{savingsDelta}</MetricHighlight></> : null}.
                       </p>
                       <p className="text-white/66">
                         In practice, the move makes sense when the current bucket is concentrated, the YO vault broadens protocol exposure, and the measured risk path still improves or at least stays inside the acceptable bar.
                       </p>
                       <p className="text-white/66">
-                        The strongest cases are the ones where concentration drops visibly, overlap stays low, and the savings score still climbs after the reallocation rather than just looking cleaner on composition alone.
+                        The strongest cases are the ones where concentration drops visibly, <MetricHighlightLink sectionId={METHODOLOGY_SECTION_IDS.overlap}>Overlap</MetricHighlightLink> stays low, and the <MetricHighlightLink sectionId={METHODOLOGY_SECTION_IDS.savingsScore}>Savings score</MetricHighlightLink> still climbs after the reallocation rather than just looking cleaner on composition alone.
                       </p>
                     </div>
                   )}
@@ -547,15 +553,15 @@ export const DepositDrawer = ({
                     <span className="font-semibold text-lime">{formatPct(recommendation.metrics.vaultApyPct)}</span>
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-4">
-                    <span>Protocol overlap</span>
+                    <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.overlap}>Overlap</MethodologyLink>
                     <span>{formatPct(recommendation.metrics.protocolOverlapPct)}</span>
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-4">
-                    <span>Existing YO share</span>
+                    <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.yoShare}>YO share</MethodologyLink>
                     <span>{formatPct(recommendation.metrics.existingYoSharePct * 100)}</span>
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-4">
-                    <span>Vault high-risk</span>
+                    <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.vaultHighRisk}>Vault high-risk</MethodologyLink>
                     <span>
                       {recommendation.metrics.vaultHighRiskExposurePct === null
                         ? "n/a"

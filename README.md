@@ -45,6 +45,15 @@ Why YO is a DeFi portfolio analysis and recommendation system. It scans a connec
 - Sync or async explanation generation
 - Local end-to-end stack with web, API, worker, Postgres, and Redis
 
+## Recommendation methodology
+
+- `Weighted risk (WRS)`: average risk score of productive DeFi positions only. Idle balances are excluded so wallet cash does not dilute protocol risk.
+  `WRS_b = Σ (usd_i / DIV_b) × risk_i`
+- `Risk coverage`: share of productive DeFi capital with public risk mapping. This is used both in user-facing trust messaging and in recommendation caution rules.
+  `Coverage_b = 1 - URE_b`
+- `Savings score (SPS)`: heuristic 0-100 bucket quality score that blends weighted risk, high-risk exposure, protocol concentration, structural complexity, unknown exposure, and idle drag. Higher is better, but it is not a yield forecast.
+  `SPS_b = 100 × (1 - penalty_b)`
+
 ## Run locally
 
 1. Copy `.env.example` to `.env`
