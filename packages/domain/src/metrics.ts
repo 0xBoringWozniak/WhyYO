@@ -45,21 +45,18 @@ const topShare = (weights: Record<string, number>, topN: number): number =>
     .reduce((sum, weight) => sum + weight, 0);
 
 const buildCoverageBar = ({
-  bucketSizeUsd,
   coveredRiskUsd,
   unknownRiskUsd,
-  idleAssetUsd,
 }: {
-  bucketSizeUsd: number;
   coveredRiskUsd: number;
   unknownRiskUsd: number;
-  idleAssetUsd: number;
 }) => {
-  if (bucketSizeUsd <= EPSILON) {
+  const productiveUsd = coveredRiskUsd + unknownRiskUsd;
+
+  if (productiveUsd <= EPSILON) {
     return [
       { key: "covered" as const, label: "Covered", valuePct: 0, tone: "good" as const },
       { key: "unknown" as const, label: "Unknown", valuePct: 0, tone: "warn" as const },
-      { key: "idle" as const, label: "Idle", valuePct: 0, tone: "neutral" as const },
     ];
   }
 
@@ -67,20 +64,14 @@ const buildCoverageBar = ({
     {
       key: "covered" as const,
       label: "Covered",
-      valuePct: (coveredRiskUsd / bucketSizeUsd) * 100,
+      valuePct: (coveredRiskUsd / productiveUsd) * 100,
       tone: "good" as const,
     },
     {
       key: "unknown" as const,
       label: "Unknown",
-      valuePct: (unknownRiskUsd / bucketSizeUsd) * 100,
+      valuePct: (unknownRiskUsd / productiveUsd) * 100,
       tone: "warn" as const,
-    },
-    {
-      key: "idle" as const,
-      label: "Idle",
-      valuePct: (idleAssetUsd / bucketSizeUsd) * 100,
-      tone: "neutral" as const,
     },
   ];
 };
@@ -96,14 +87,24 @@ const buildIdleVsInvestedBar = ({
 }) => {
   if (bucketSizeUsd <= EPSILON) {
     return [
-      { key: "productive" as const, label: "Productive", valuePct: 0 },
-      { key: "idle" as const, label: "Idle", valuePct: 0 },
+      { key: "productive" as const, label: "Productive", valuePct: 0, tone: "good" as const },
+      { key: "idle" as const, label: "Idle", valuePct: 0, tone: "warn" as const },
     ];
   }
 
   return [
-    { key: "productive" as const, label: "Productive", valuePct: (defiInvestedUsd / bucketSizeUsd) * 100 },
-    { key: "idle" as const, label: "Idle", valuePct: (idleAssetUsd / bucketSizeUsd) * 100 },
+    {
+      key: "productive" as const,
+      label: "Productive",
+      valuePct: (defiInvestedUsd / bucketSizeUsd) * 100,
+      tone: "good" as const,
+    },
+    {
+      key: "idle" as const,
+      label: "Idle",
+      valuePct: (idleAssetUsd / bucketSizeUsd) * 100,
+      tone: "warn" as const,
+    },
   ];
 };
 
@@ -313,10 +314,8 @@ export const computeBucketMetrics = (
     strategyWeights,
     visualization: {
       coverageBar: buildCoverageBar({
-        bucketSizeUsd,
         coveredRiskUsd,
         unknownRiskUsd,
-        idleAssetUsd,
       }),
       idleVsInvestedBar: buildIdleVsInvestedBar({
         bucketSizeUsd,
