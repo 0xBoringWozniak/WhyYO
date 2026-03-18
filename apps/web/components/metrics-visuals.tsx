@@ -96,7 +96,7 @@ export const BeforeAfterBars = ({
                   <div
                     className={cn(
                       "h-3 rounded-full shadow-[0_0_18px_rgba(215,255,31,0.32)]",
-                      improved === false ? "bg-[#ff6b6b] shadow-none" : metric.betterDirection === "higher" ? "bg-lime" : "bg-mint",
+                      improved === false ? "bg-[#ff6b6b] shadow-none" : "bg-lime",
                     )}
                     style={{ width: widthForValue(metric.after, metricScaleMax(metric)) }}
                   />

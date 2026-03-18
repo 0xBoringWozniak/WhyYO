@@ -718,8 +718,25 @@ const BucketOverviewCard = ({
   tokens: BucketTokenChip[];
   protocols: CanonicalProtocolExposure[];
   hasRecommendation: boolean;
-}) => (
-  <Card className="relative flex h-[1260px] flex-col space-y-5 overflow-hidden">
+}) => {
+  const idlePct = Math.max(0, Math.min(100, bucket.idleSharePct * 100));
+  const productivePct = Math.max(0, Math.min(100, 100 - idlePct));
+  const coveredPct =
+    bucket.riskCoveragePct === null ? 0 : Math.max(0, Math.min(100, productivePct * bucket.riskCoveragePct));
+  const unknownPct = Math.max(0, 100 - coveredPct);
+
+  const coverageSegments = [
+    { key: "covered", label: "Covered", valuePct: coveredPct, tone: "good" as const },
+    { key: "unknown", label: "Unknown", valuePct: unknownPct, tone: "warn" as const },
+  ];
+
+  const productiveVsIdleSegments = [
+    { key: "productive", label: "Productive", valuePct: productivePct, tone: "good" as const },
+    { key: "idle", label: "Idle", valuePct: idlePct, tone: "warn" as const },
+  ];
+
+  return (
+    <Card className="relative flex h-[1260px] flex-col space-y-5 overflow-hidden">
     <Badge
       tone={hasRecommendation ? "good" : "neutral"}
       className="absolute right-4 top-4 z-10 h-10 min-w-[86px] max-w-[86px] justify-center px-2 py-0 text-center text-[10px]"
@@ -764,11 +781,11 @@ const BucketOverviewCard = ({
       </div>
     </div>
 
-    <StackedBar segments={bucket.visualization.coverageBar} />
-    <StackedBar segments={bucket.visualization.idleVsInvestedBar} />
+    <StackedBar segments={coverageSegments} />
+    <StackedBar segments={productiveVsIdleSegments} />
 
     <div className="space-y-3">
-        <div className="text-xs uppercase tracking-[0.2em] text-white/42">Top tokens</div>
+      <div className="text-xs uppercase tracking-[0.2em] text-white/42">Top tokens</div>
       <div className="space-y-3">
         {tokens.length > 0 ? (
           <div className="max-h-[324px] min-h-[324px] space-y-3 overflow-y-auto pr-1 [scrollbar-color:rgba(215,255,31,0.55)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/55 [&::-webkit-scrollbar-track]:bg-transparent">
@@ -823,8 +840,9 @@ const BucketOverviewCard = ({
         )}
       </div>
     </div>
-  </Card>
-);
+    </Card>
+  );
+};
 
 const RecommendationCard = ({
   recommendation,
@@ -1165,7 +1183,7 @@ export const ScanShell = ({
   const tokenExposures = scan?.portfolioOverview.tokenExposures ?? [];
   const protocolExposures = scan?.portfolioOverview.protocolExposures ?? [];
   const analyzedUsd = scan?.portfolioOverview.analyzedUsd ?? 0;
-  const analyzedPct = totalValue > 0 ? (analyzedUsd / totalValue) * 100 : 0;
+  const analyzedPct = totalValue > 0 ? Math.min((analyzedUsd / totalValue) * 100, 100) : 0;
 
   React.useEffect(() => {
     const element = recommendationsScrollerRef.current;
@@ -1242,54 +1260,56 @@ export const ScanShell = ({
                   </div>
                 </div>
 
-                <div className="mt-10 space-y-6">
+                <div className="mt-10 flex min-h-[28rem] flex-col justify-between gap-10">
                   <h1 className="yo-display max-w-5xl text-[4.3rem] leading-[0.9] md:text-[6rem]">
                     YO GOT YO RISK OPTIMIZED, PERIOD.
                   </h1>
-                  <div className="flex flex-wrap gap-3">
-                    <a
-                      href="https://exponential.fi/"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center rounded-full border border-black/12 bg-white/55 px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-black/72 shadow-[0_4px_16px_rgba(0,0,0,0.05)] transition hover:bg-white/68"
-                    >
-                      Powered by Exponential
-                    </a>
-                    <a
-                      href="https://debank.com/"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center rounded-full border border-black/12 bg-white/55 px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-black/72 shadow-[0_4px_16px_rgba(0,0,0,0.05)] transition hover:bg-white/68"
-                    >
-                      Portfolio via DeBank
-                    </a>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="border border-black/10 bg-black text-white hover:bg-black/85"
-                      onClick={openMethodologyPage}
-                    >
-                      Methodology
-                    </Button>
-                    {scan && activeWalletAddress ? (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-3">
+                      <a
+                        href="https://exponential.fi/"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center rounded-full border border-black/12 bg-white/55 px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-black/72 shadow-[0_4px_16px_rgba(0,0,0,0.05)] transition hover:bg-white/68"
+                      >
+                        Powered by Exponential
+                      </a>
+                      <a
+                        href="https://debank.com/"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center rounded-full border border-black/12 bg-white/55 px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-black/72 shadow-[0_4px_16px_rgba(0,0,0,0.05)] transition hover:bg-white/68"
+                      >
+                        Portfolio via DeBank
+                      </a>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
                       <Button
+                        type="button"
                         variant="secondary"
                         className="border border-black/10 bg-black text-white hover:bg-black/85"
-                        disabled={refreshMutation.isPending}
-                        onClick={() => refreshMutation.mutate(activeWalletAddress)}
+                        onClick={openMethodologyPage}
                       >
-                        {refreshMutation.isPending ? (
-                          <span className="inline-flex items-center gap-2">
-                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                            Refreshing...
-                          </span>
-                        ) : (
-                          "Refresh analysis"
-                        )}
+                        Methodology
                       </Button>
-                    ) : null}
+                      {scan && activeWalletAddress ? (
+                        <Button
+                          variant="secondary"
+                          className="border border-black/10 bg-black text-white hover:bg-black/85"
+                          disabled={refreshMutation.isPending}
+                          onClick={() => refreshMutation.mutate(activeWalletAddress)}
+                        >
+                          {refreshMutation.isPending ? (
+                            <span className="inline-flex items-center gap-2">
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                              Refreshing...
+                            </span>
+                          ) : (
+                            "Refresh analysis"
+                          )}
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1302,7 +1322,7 @@ export const ScanShell = ({
                       href="https://yo.xyz"
                       target="_blank"
                       rel="noreferrer"
-                      className="font-semibold text-lime underline decoration-lime/45 underline-offset-4"
+                      className="align-baseline text-lime underline decoration-lime/45 underline-offset-4 [font:inherit] [line-height:inherit] [letter-spacing:inherit]"
                     >
                       YO vaults
                     </a>{" "}
