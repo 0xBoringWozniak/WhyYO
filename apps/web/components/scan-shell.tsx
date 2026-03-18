@@ -1114,6 +1114,7 @@ export const ScanShell = ({
   const activeWalletAddress = initialWalletAddress ?? address ?? "";
   const activeWalletLabel = initialWalletAddress ? "Guest address" : address ? "Connected wallet" : "Wallet";
   const resumeParam = searchParams.get("resume");
+  const connectParam = searchParams.get("connect");
 
   React.useEffect(() => {
     setAddressDraft(initialWalletAddress ?? "");
@@ -1128,6 +1129,15 @@ export const ScanShell = ({
     setForceConnectChoice(false);
     setBootStage((current) => (current === "intro" || current === "booting" ? "active" : current));
   }, [initialWalletAddress, resumeParam]);
+
+  React.useEffect(() => {
+    if (initialWalletAddress) return;
+    if (connectParam !== "1") return;
+
+    setError(null);
+    setForceConnectChoice(true);
+    setBootStage("connect");
+  }, [connectParam, initialWalletAddress, setError]);
 
   React.useEffect(() => {
     restoreDashboardScrollFromUrl();
@@ -1194,6 +1204,18 @@ export const ScanShell = ({
     if (!isConnected || !address) return;
     setWalletReconnectEnabled(true);
   }, [address, initialWalletAddress, isConnected]);
+
+  const goToIntroScreen = React.useCallback(() => {
+    setWalletReconnectEnabled(false);
+    if (initialWalletAddress) {
+      router.push("/?connect=1");
+      return;
+    }
+    setError(null);
+    setForceConnectChoice(true);
+    setBootStage("connect");
+    router.push("/?connect=1");
+  }, [initialWalletAddress, router, setError]);
 
   const openConnectChoice = React.useCallback(() => {
     if (initialWalletAddress) {
@@ -1303,7 +1325,7 @@ export const ScanShell = ({
             <div className="flex flex-wrap items-center justify-between gap-4">
               <button
                 type="button"
-                onClick={openConnectChoice}
+                onClick={goToIntroScreen}
                 className="group relative z-10 inline-flex cursor-pointer items-center gap-3 bg-transparent text-lime transition"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1334,17 +1356,11 @@ export const ScanShell = ({
 
             <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.18fr)_minmax(420px,0.82fr)]">
               <div className="rounded-[42px] bg-lime px-8 py-8 text-black shadow-panel lg:px-10 lg:py-10">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="rounded-full bg-black px-5 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white">
-                    WHY YO? LET THE NUMBERS SPEAK.
-                  </div>
-                </div>
-
-                <div className="mt-10 space-y-8">
+                <div className="flex min-h-full flex-col">
                   <h1 className="yo-display max-w-5xl text-[4.3rem] leading-[0.9] md:text-[6rem]">
                     YO GOT YO RISK OPTIMIZED, PERIOD.
                   </h1>
-                  <div className="space-y-3 pt-1">
+                  <div className="mt-auto space-y-3 pt-8">
                     <div className="flex flex-wrap gap-3">
                       <a
                         href="https://exponential.fi/"
@@ -1423,7 +1439,7 @@ export const ScanShell = ({
                   </Card>
 
                   <Card className="flex h-full flex-col space-y-3">
-                    <div className="text-xs uppercase tracking-[0.22em] text-white/42">Recommendations</div>
+                    <div className="text-xs uppercase tracking-[0.22em] text-white/42">Why YO? Let the numbers speak.</div>
                     <div className="min-h-[8.5rem] font-display text-5xl leading-none text-lime">{recommendations.length}</div>
                     <p className="text-base leading-7 text-white/62">
                       Explore personalized recommendations based on your onchain data and an industry-leading risk
