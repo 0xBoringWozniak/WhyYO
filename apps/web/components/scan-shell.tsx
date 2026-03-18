@@ -280,31 +280,43 @@ const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\
 const renderLinkedMetricText = (text: string) => {
   if (!text) return text;
 
-  const pattern = new RegExp(LINKABLE_METRIC_PHRASES.map(({ phrase }) => escapeRegExp(phrase)).join("|"), "g");
-  const parts = text.split(pattern);
-  const matches = text.match(pattern) ?? [];
   const nodes: React.ReactNode[] = [];
+  const pattern = new RegExp(
+    `(${LINKABLE_METRIC_PHRASES.map(({ phrase }) => escapeRegExp(phrase)).join("|")})`,
+    "gi",
+  );
 
-  for (let index = 0; index < parts.length; index += 1) {
-    const part = parts[index];
-    if (part) {
-      nodes.push(<React.Fragment key={`text-${index}`}>{part}</React.Fragment>);
+  let lastIndex = 0;
+  let matchIndex = 0;
+
+  for (const match of text.matchAll(pattern)) {
+    const found = match[0];
+    const start = match.index ?? 0;
+
+    if (start > lastIndex) {
+      nodes.push(<React.Fragment key={`text-${matchIndex}`}>{text.slice(lastIndex, start)}</React.Fragment>);
     }
 
-    const match = matches[index];
-    if (!match) continue;
-
-    const metric = LINKABLE_METRIC_PHRASES.find(({ phrase }) => phrase === match);
+    const metric = LINKABLE_METRIC_PHRASES.find(({ phrase }) => phrase.toLowerCase() === found.toLowerCase());
     if (!metric) {
-      nodes.push(<React.Fragment key={`match-${index}`}>{match}</React.Fragment>);
+      nodes.push(<React.Fragment key={`match-${matchIndex}`}>{found}</React.Fragment>);
+      lastIndex = start + found.length;
+      matchIndex += 1;
       continue;
     }
 
     nodes.push(
-      <MethodologyLink key={`match-${index}`} sectionId={metric.sectionId}>
-        {match}
+      <MethodologyLink key={`match-${matchIndex}`} sectionId={metric.sectionId}>
+        {found}
       </MethodologyLink>,
     );
+
+    lastIndex = start + found.length;
+    matchIndex += 1;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(<React.Fragment key={`text-tail`}>{text.slice(lastIndex)}</React.Fragment>);
   }
 
   return nodes;
