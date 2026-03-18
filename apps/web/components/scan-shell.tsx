@@ -910,7 +910,7 @@ const RecommendationCard = ({
 
       <div className="space-y-3 px-4 py-4">
         <div className="grid gap-3 xl:grid-cols-[1.02fr_0.98fr]">
-          <div className="space-y-3 rounded-[26px] border border-white/8 bg-[#121212] p-4">
+          <div className="space-y-5 rounded-[26px] border border-white/8 bg-[#121212] p-4">
             <div className="mb-4 text-xs uppercase tracking-[0.2em] text-white/42">
               {recommendation.showBeforeAfterBars ? "Modeled comparison" : "Idle opportunity profile"}
             </div>
@@ -1159,7 +1159,8 @@ export const ScanShell = ({
   const recommendations = scan?.recommendations ?? [];
   const tokenExposures = scan?.portfolioOverview.tokenExposures ?? [];
   const protocolExposures = scan?.portfolioOverview.protocolExposures ?? [];
-  const deployableUsd = scan?.bucketOverview.reduce((sum, bucket) => sum + bucket.idleAssetUsd, 0) ?? 0;
+  const analyzedUsd = scan?.portfolioOverview.analyzedUsd ?? 0;
+  const analyzedPct = totalValue > 0 ? (analyzedUsd / totalValue) * 100 : 0;
 
   React.useEffect(() => {
     const element = recommendationsScrollerRef.current;
@@ -1194,7 +1195,7 @@ export const ScanShell = ({
       />
       <LoadingOverlay open={loadingVisible} />
       <main className="min-h-screen bg-fog text-ink">
-        <section className="grid-shell border-b border-white/6">
+        <section className="grid-shell">
           <div className="mx-auto max-w-[1880px] px-6 py-6 lg:px-10 2xl:px-14">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <button
@@ -1238,13 +1239,8 @@ export const ScanShell = ({
 
                 <div className="mt-10 space-y-6">
                   <h1 className="yo-display max-w-5xl text-[4.3rem] leading-[0.9] md:text-[6rem]">
-                    YO GOT YO RISKS OPTIMIZED
+                    YO GOT YO RISK OPTIMIZED, PERIOD.
                   </h1>
-                  <p className="max-w-4xl text-[1.28rem] leading-9 text-black/78">
-                    Why YO? scans the wallet, scores risk and diversification bucket by bucket, and explains where YO
-                    can improve the setup. Idle capital, concentrated DeFi positions, and covered risk improvements all
-                    get different recommendation logic.
-                  </p>
                   <div className="flex flex-wrap gap-3">
                     <a
                       href="https://exponential.fi/"
@@ -1293,32 +1289,43 @@ export const ScanShell = ({
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-4">
                 <Card className="space-y-3">
-                  <div className="text-xs uppercase tracking-[0.22em] text-white/42">Position value</div>
-                  <div className="font-display text-5xl leading-none text-lime">{formatUsd(scan?.portfolioOverview.totalUsd ?? 0)}</div>
-                  <p className="text-base leading-7 text-white/62">Full wallet value in this scan.</p>
-                </Card>
-
-                <Card className="space-y-3">
-                  <div className="text-xs uppercase tracking-[0.22em] text-white/42">Analyzed value</div>
-                  <div className="font-display text-5xl leading-none text-lime">{formatUsd(scan?.portfolioOverview.analyzedUsd ?? 0)}</div>
-                  <p className="text-base leading-7 text-white/62">Capital included in scoring.</p>
-                </Card>
-
-                <Card className="space-y-3">
-                  <div className="text-xs uppercase tracking-[0.22em] text-white/42">Deployable now</div>
-                  <div className="font-display text-5xl leading-none text-lime">{formatUsd(deployableUsd)}</div>
-                  <p className="text-base leading-7 text-white/62">Idle capital ready to move.</p>
-                </Card>
-
-                <Card className="space-y-3">
-                  <div className="text-xs uppercase tracking-[0.22em] text-white/42">Recommendations</div>
-                  <div className="font-display text-5xl leading-none text-lime">{recommendations.length}</div>
-                  <p className="text-base leading-7 text-white/62">
-                    {activeWalletAddress ? shortenAddress(activeWalletAddress).toUpperCase() : "NOT SET"} · {scan?.warnings[0] ?? "Recommendation cards are ready."}
+                  <p className="max-w-xl text-[1.15rem] leading-8 text-white/72">
+                    WhyYO tool scans your wallet, scores risk and diversification bucket by bucket, and shows where{" "}
+                    <a
+                      href="https://yo.xyz"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-semibold text-lime underline decoration-lime/45 underline-offset-4"
+                    >
+                      YO vaults
+                    </a>{" "}
+                    can improve the setup based on the personal portfolio metrics.
                   </p>
                 </Card>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Card className="space-y-3">
+                    <div className="text-xs uppercase tracking-[0.22em] text-white/42">Analyzed value</div>
+                    <div className="font-display text-5xl leading-none text-lime">
+                      {formatUsd(analyzedUsd)}{" "}
+                      <span className="text-[2.2rem] text-white/72">({formatPct(analyzedPct)})</span>
+                    </div>
+                    <p className="text-base leading-7 text-white/62">
+                      The share of your portfolio the engine could confidently analyze and use for recommendations.
+                    </p>
+                  </Card>
+
+                  <Card className="space-y-3">
+                    <div className="text-xs uppercase tracking-[0.22em] text-white/42">Recommendations</div>
+                    <div className="font-display text-5xl leading-none text-lime">{recommendations.length}</div>
+                    <p className="text-base leading-7 text-white/62">
+                      Explore personalized recommendations based on your onchain data and an industry-leading risk
+                      framework.
+                    </p>
+                  </Card>
+                </div>
               </div>
             </div>
           </div>
@@ -1354,18 +1361,7 @@ export const ScanShell = ({
           {scan ? (
             <>
               <section className="space-y-5">
-                <SectionTitle
-                  title="BUCKET OVERVIEW"
-                  action={
-                    <button
-                      type="button"
-                      onClick={openMethodologyPage}
-                      className="text-sm uppercase tracking-[0.18em] text-lime underline decoration-lime/45 underline-offset-4"
-                    >
-                      Open methodology
-                    </button>
-                  }
-                />
+                <SectionTitle title="BUCKET OVERVIEW" />
                 <div className="grid items-start gap-4 xl:grid-cols-4">
                   {scan.bucketOverview.map((bucket) => (
                     <BucketOverviewCard
