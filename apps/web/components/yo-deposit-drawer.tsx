@@ -580,27 +580,6 @@ export const DepositDrawer = ({
                     : "This recommendation is advisory. Use it to decide what to withdraw first from the productive bucket before depositing manually into YO."}
                 </div>
 
-                <div className="mt-auto flex flex-col border-t border-white/8 pt-4">
-                  <div className="rounded-2xl border border-white/8 bg-[#121212] p-4">
-                    <div className="flex items-center justify-between text-base">
-                      <div>
-                        <div className="text-xs uppercase tracking-[0.18em] text-white/40">Structure</div>
-                        <div className="mt-1 font-medium text-white/82">
-                          {recommendation.visualization.simplification.beforePositions} positions {"->"} {recommendation.visualization.simplification.afterPositions} target positions
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(recommendation.visualization.simplification.beforePositions, 8) }).map((_, index) => (
-                          <span key={`drawer-before-${index}`} className="h-2.5 w-2.5 rounded-full bg-white/25" />
-                        ))}
-                        <span className="mx-2 text-white/30">{"->"}</span>
-                        {Array.from({ length: Math.min(recommendation.visualization.simplification.afterPositions, 4) }).map((_, index) => (
-                          <span key={`drawer-after-${index}`} className="h-2.5 w-2.5 rounded-full bg-lime" />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 

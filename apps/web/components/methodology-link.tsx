@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-import { useRouter } from "next/navigation";
 
 import { cn } from "../lib/utils";
 
@@ -71,27 +70,25 @@ export const MethodologyLink = ({
   children: React.ReactNode;
   className?: string;
 }) => {
-  const router = useRouter();
-
   return (
     <button
       type="button"
-    onClick={(event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const currentPath = `${window.location.pathname}${window.location.search}`;
-      const scrollAwareReturnTo = buildDashboardReturnTo(currentPath, window.scrollY);
-      window.history.replaceState(window.history.state, "", scrollAwareReturnTo);
-      const url = new URL(buildMethodologyMetricHref(sectionId), window.location.origin);
-      url.searchParams.set("returnTo", scrollAwareReturnTo);
-      router.push(`${url.pathname}${url.search}${url.hash}`);
-    }}
-    className={cn(
-      "inline p-0 m-0 border-0 bg-transparent text-current cursor-pointer underline decoration-current/45 underline-offset-4 transition hover:decoration-current",
-      className,
-    )}
-  >
-    {children}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const currentPath = `${window.location.pathname}${window.location.search}`;
+        const scrollAwareReturnTo = buildDashboardReturnTo(currentPath, window.scrollY);
+        window.history.replaceState(window.history.state, "", scrollAwareReturnTo);
+        const url = new URL(buildMethodologyMetricHref(sectionId), window.location.origin);
+        url.searchParams.set("returnTo", scrollAwareReturnTo);
+        window.location.assign(`${url.pathname}${url.search}${url.hash}`);
+      }}
+      className={cn(
+        "inline cursor-pointer appearance-none border-0 bg-transparent p-0 m-0 text-left align-baseline text-current underline decoration-current/45 underline-offset-4 [font:inherit] [line-height:inherit] [letter-spacing:inherit] hover:decoration-current",
+        className,
+      )}
+    >
+      {children}
     </button>
   );
 };

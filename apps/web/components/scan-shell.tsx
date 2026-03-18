@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 
@@ -954,7 +954,9 @@ const RecommendationCard = ({
                     </div>
                     <div className="rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
                       <div className="text-xs uppercase tracking-[0.18em] text-white/42">
-                        <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.vaultHighRisk}>Vault high-risk</MethodologyLink>
+                        <MethodologyLink className="whitespace-nowrap" sectionId={METHODOLOGY_SECTION_IDS.vaultHighRisk}>
+                          Vault high-risk
+                        </MethodologyLink>
                       </div>
                       <div className={cn("mt-2 text-xl font-semibold", vaultHighRiskTone)}>{formatReadableValue(recommendation.metrics.vaultHighRiskExposurePct, formatPct, "n/a")}</div>
                     </div>
@@ -1019,17 +1021,21 @@ const RecommendationCard = ({
           </div>
         </div>
 
-        <div className="grid gap-3 lg:grid-cols-2">
-          <CompositionCompare
-            title="Protocol mix"
-            current={recommendation.visualization.currentComposition.protocols}
-            target={recommendation.visualization.yoComposition.protocols}
-          />
-          <CompositionCompare
-            title="Strategy mix"
-            current={recommendation.visualization.currentComposition.strategies}
-            target={recommendation.visualization.yoComposition.strategies}
-          />
+        <div className="grid items-start gap-3 lg:grid-cols-2">
+          <div className="rounded-[22px] border border-white/8 bg-[#121212] p-4">
+            <CompositionCompare
+              title="Protocol mix"
+              current={recommendation.visualization.currentComposition.protocols}
+              target={recommendation.visualization.yoComposition.protocols}
+            />
+          </div>
+          <div className="rounded-[22px] border border-white/8 bg-[#121212] p-4">
+            <CompositionCompare
+              title="Strategy mix"
+              current={recommendation.visualization.currentComposition.strategies}
+              target={recommendation.visualization.yoComposition.strategies}
+            />
+          </div>
         </div>
       </div>
     </Card>
@@ -1055,7 +1061,6 @@ export const ScanShell = ({
   const [canScrollRecommendationsPrev, setCanScrollRecommendationsPrev] = React.useState(false);
   const [canScrollRecommendationsNext, setCanScrollRecommendationsNext] = React.useState(false);
   const pathname = usePathname();
-  const router = useRouter();
 
   const activeWalletAddress = initialWalletAddress ?? address ?? "";
   const activeWalletLabel = initialWalletAddress ? "Guest address" : address ? "Connected wallet" : "Wallet";
@@ -1067,8 +1072,8 @@ export const ScanShell = ({
     const currentPath = `${pathname}${typeof window !== "undefined" ? window.location.search : ""}`;
     const returnTo = buildDashboardReturnTo(currentPath, typeof window !== "undefined" ? window.scrollY : 0);
     window.history.replaceState(window.history.state, "", returnTo);
-    router.push(`/methodology?returnTo=${encodeURIComponent(returnTo)}`);
-  }, [pathname, router]);
+    window.location.assign(`/methodology?returnTo=${encodeURIComponent(returnTo)}`);
+  }, [pathname]);
 
   const mutation = useMutation({
     mutationFn: async (walletAddress: string) => startScan(walletAddress),
@@ -1306,9 +1311,9 @@ export const ScanShell = ({
                 </Card>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Card className="space-y-3">
+                  <Card className="flex h-full flex-col space-y-3">
                     <div className="text-xs uppercase tracking-[0.22em] text-white/42">Analyzed value</div>
-                    <div className="font-display text-5xl leading-none text-lime">
+                    <div className="min-h-[8.5rem] font-display text-5xl leading-none text-lime">
                       {formatUsd(analyzedUsd)}{" "}
                       <span className="text-[2.2rem] text-white/72">({formatPct(analyzedPct)})</span>
                     </div>
@@ -1317,9 +1322,9 @@ export const ScanShell = ({
                     </p>
                   </Card>
 
-                  <Card className="space-y-3">
+                  <Card className="flex h-full flex-col space-y-3">
                     <div className="text-xs uppercase tracking-[0.22em] text-white/42">Recommendations</div>
-                    <div className="font-display text-5xl leading-none text-lime">{recommendations.length}</div>
+                    <div className="min-h-[8.5rem] font-display text-5xl leading-none text-lime">{recommendations.length}</div>
                     <p className="text-base leading-7 text-white/62">
                       Explore personalized recommendations based on your onchain data and an industry-leading risk
                       framework.
