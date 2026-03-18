@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { usePathname } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 
@@ -11,6 +11,7 @@ import { refreshScan, startScan } from "../lib/api";
 import { getVaultAccent, getVaultLogoUrl, yoBrandMarkUrl } from "../lib/brand-assets";
 import { reportClientError } from "../lib/client-error-reporting";
 import { cn, formatPct, formatUsd } from "../lib/utils";
+import { setWalletReconnectEnabled } from "../lib/wagmi";
 import { useScanStore } from "../store/use-scan-store";
 import { AssetIcon } from "./asset-icon";
 import { MethodologyLink, METHODOLOGY_SECTION_IDS, buildDashboardReturnTo, restoreDashboardScrollFromUrl } from "./methodology-link";
@@ -956,37 +957,45 @@ const RecommendationCard = ({
                 <div className="text-xs uppercase tracking-[0.2em] text-white/42">Trust layer</div>
                 <div className="mt-4 space-y-3">
                   <div className="flex items-center justify-between rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
-                    <div className="text-xs uppercase tracking-[0.18em] text-white/42">
-                      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.trustIndex}>Trust index</MethodologyLink>
+                    <div className="min-w-0 overflow-hidden text-[0.7rem] uppercase tracking-[0.14em] leading-tight text-white/42">
+                      <MethodologyLink className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap no-underline border-b border-current/80 pb-[0.14rem]" sectionId={METHODOLOGY_SECTION_IDS.trustIndex}>
+                        Trust index
+                      </MethodologyLink>
                     </div>
                     <span className={cn("inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]", trustIndex.className)}>
                       {trustIndex.label}
                     </span>
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
-                    <div className="rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
-                      <div className="text-xs uppercase tracking-[0.18em] text-white/42">
-                        <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.coverage}>Coverage</MethodologyLink>
+                    <div className="min-w-0 rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
+                      <div className="min-w-0 overflow-hidden text-[0.7rem] uppercase tracking-[0.14em] leading-tight text-white/42">
+                        <MethodologyLink className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap no-underline border-b border-current/80 pb-[0.14rem]" sectionId={METHODOLOGY_SECTION_IDS.coverage}>
+                          Coverage
+                        </MethodologyLink>
                       </div>
                       <div className={cn("mt-2 text-xl font-semibold", coverageTone)}>{formatReadableValue(recommendation.metrics.coveragePct, formatPct, "n/a")}</div>
                     </div>
-                    <div className="rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
-                      <div className="text-xs uppercase tracking-[0.18em] text-white/42">
-                        <MethodologyLink className="whitespace-nowrap" sectionId={METHODOLOGY_SECTION_IDS.vaultHighRisk}>
+                    <div className="min-w-0 rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
+                      <div className="min-w-0 overflow-hidden text-[0.65rem] uppercase tracking-[0.11em] leading-tight text-white/42">
+                        <MethodologyLink className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap no-underline border-b border-current/80 pb-[0.14rem]" sectionId={METHODOLOGY_SECTION_IDS.vaultHighRisk}>
                           Vault high-risk
                         </MethodologyLink>
                       </div>
                       <div className={cn("mt-2 text-xl font-semibold", vaultHighRiskTone)}>{formatReadableValue(recommendation.metrics.vaultHighRiskExposurePct, formatPct, "n/a")}</div>
                     </div>
-                    <div className="rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
-                      <div className="text-xs uppercase tracking-[0.18em] text-white/42">
-                        <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.yoShare}>YO share</MethodologyLink>
+                    <div className="min-w-0 rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
+                      <div className="min-w-0 overflow-hidden text-[0.7rem] uppercase tracking-[0.14em] leading-tight text-white/42">
+                        <MethodologyLink className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap no-underline border-b border-current/80 pb-[0.14rem]" sectionId={METHODOLOGY_SECTION_IDS.yoShare}>
+                          YO share
+                        </MethodologyLink>
                       </div>
                       <div className={cn("mt-2 text-xl font-semibold", existingYoShareTone)}>{formatPct(recommendation.metrics.existingYoSharePct * 100)}</div>
                     </div>
-                    <div className="rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
-                      <div className="text-xs uppercase tracking-[0.18em] text-white/42">
-                        <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.overlap}>Overlap</MethodologyLink>
+                    <div className="min-w-0 rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
+                      <div className="min-w-0 overflow-hidden text-[0.7rem] uppercase tracking-[0.14em] leading-tight text-white/42">
+                        <MethodologyLink className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap no-underline border-b border-current/80 pb-[0.14rem]" sectionId={METHODOLOGY_SECTION_IDS.overlap}>
+                          Overlap
+                        </MethodologyLink>
                       </div>
                       <div className={cn("mt-2 text-xl font-semibold", overlapTone)}>{formatPct(recommendation.metrics.protocolOverlapPct)}</div>
                     </div>
@@ -1039,15 +1048,15 @@ const RecommendationCard = ({
           </div>
         </div>
 
-        <div className="grid items-start gap-3 lg:grid-cols-2">
-          <div className="rounded-[22px] border border-white/8 bg-[#121212] p-4">
+        <div className="grid gap-3 xl:grid-cols-[1.02fr_0.98fr]">
+          <div className="h-full rounded-[22px] border border-white/8 bg-[#121212] p-4">
             <CompositionCompare
               title="Protocol mix"
               current={recommendation.visualization.currentComposition.protocols}
               target={recommendation.visualization.yoComposition.protocols}
             />
           </div>
-          <div className="rounded-[22px] border border-white/8 bg-[#121212] p-4">
+          <div className="h-full rounded-[22px] border border-white/8 bg-[#121212] p-4">
             <CompositionCompare
               title="Strategy mix"
               current={recommendation.visualization.currentComposition.strategies}
@@ -1067,7 +1076,9 @@ export const ScanShell = ({
   initialWalletAddress?: string;
   initialBootStage?: BootStage;
 } = {}) => {
-  const { address } = useAccount();
+  const { address, isConnected } = useAccount();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { connect, connectors, isPending: isConnecting } = useConnect();
   const { disconnect } = useDisconnect();
   const { phase, scan, error, setPhase, setScan, setError } = useScanStore();
@@ -1078,20 +1089,36 @@ export const ScanShell = ({
   const recommendationsScrollerRef = React.useRef<HTMLDivElement | null>(null);
   const [canScrollRecommendationsPrev, setCanScrollRecommendationsPrev] = React.useState(false);
   const [canScrollRecommendationsNext, setCanScrollRecommendationsNext] = React.useState(false);
-  const pathname = usePathname();
 
   const activeWalletAddress = initialWalletAddress ?? address ?? "";
   const activeWalletLabel = initialWalletAddress ? "Guest address" : address ? "Connected wallet" : "Wallet";
+  const resumeParam = searchParams.get("resume");
+
+  React.useEffect(() => {
+    setAddressDraft(initialWalletAddress ?? "");
+    setForceConnectChoice(false);
+    setBootStage(initialBootStage ?? (initialWalletAddress ? "active" : "intro"));
+  }, [initialBootStage, initialWalletAddress]);
+
+  React.useEffect(() => {
+    if (initialWalletAddress) return;
+    if (resumeParam !== "1") return;
+
+    setForceConnectChoice(false);
+    setBootStage((current) => (current === "intro" || current === "booting" ? "active" : current));
+  }, [initialWalletAddress, resumeParam]);
+
   React.useEffect(() => {
     restoreDashboardScrollFromUrl();
   }, []);
 
   const openMethodologyPage = React.useCallback(() => {
-    const currentPath = `${pathname}${typeof window !== "undefined" ? window.location.search : ""}`;
+    const currentPath =
+      typeof window !== "undefined" ? `${window.location.pathname}${window.location.search}` : "/";
     const returnTo = buildDashboardReturnTo(currentPath, typeof window !== "undefined" ? window.scrollY : 0);
     window.history.replaceState(window.history.state, "", returnTo);
-    window.location.assign(`/methodology?returnTo=${encodeURIComponent(returnTo)}`);
-  }, [pathname]);
+    router.push(`/methodology?returnTo=${encodeURIComponent(returnTo)}`);
+  }, [router]);
 
   const mutation = useMutation({
     mutationFn: async (walletAddress: string) => startScan(walletAddress),
@@ -1141,11 +1168,34 @@ export const ScanShell = ({
     }
   }, [activeWalletAddress, bootStage, forceConnectChoice]);
 
+  React.useEffect(() => {
+    if (initialWalletAddress) return;
+    if (!isConnected || !address) return;
+    setWalletReconnectEnabled(true);
+  }, [address, initialWalletAddress, isConnected]);
+
   const openConnectChoice = React.useCallback(() => {
+    if (initialWalletAddress) {
+      window.location.assign("/");
+      return;
+    }
+    if (isConnected || address) {
+      setForceConnectChoice(false);
+      setBootStage("active");
+      return;
+    }
+    setError(null);
+    setPhase("idle");
+    setForceConnectChoice(true);
+    setBootStage("connect");
+  }, [address, initialWalletAddress, isConnected, setError, setPhase]);
+
+  const disconnectWallet = React.useCallback(() => {
     setScan(null);
     setError(null);
     setPhase("idle");
     lastAutoScannedWallet.current = null;
+    setWalletReconnectEnabled(false);
     if (initialWalletAddress) {
       window.location.assign("/");
       return;
@@ -1161,6 +1211,11 @@ export const ScanShell = ({
     bootStage === "active" && Boolean(activeWalletAddress) && !error && (phase === "scanning" || mutation.isPending || !scan);
 
   const connectInjectedWallet = () => {
+    if (isConnected || address) {
+      setForceConnectChoice(false);
+      setBootStage("active");
+      return;
+    }
     setForceConnectChoice(false);
     const connector = connectors[0];
     if (!connector) {
@@ -1240,7 +1295,7 @@ export const ScanShell = ({
                 {address && !initialWalletAddress ? (
                   <Button
                     variant="secondary"
-                    onClick={openConnectChoice}
+                    onClick={disconnectWallet}
                   >
                     Disconnect
                   </Button>

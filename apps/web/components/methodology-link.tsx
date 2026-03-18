@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import { useRouter } from "next/navigation";
 
 import { cn } from "../lib/utils";
 
@@ -70,25 +71,43 @@ export const MethodologyLink = ({
   children: React.ReactNode;
   className?: string;
 }) => {
+  const router = useRouter();
+
+  const handleNavigate = (event?: Pick<React.SyntheticEvent, "preventDefault" | "stopPropagation">) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const currentPath = `${window.location.pathname}${window.location.search}`;
+    const scrollAwareReturnTo = buildDashboardReturnTo(currentPath, window.scrollY);
+    window.history.replaceState(window.history.state, "", scrollAwareReturnTo);
+    const url = new URL(buildMethodologyMetricHref(sectionId), window.location.origin);
+    url.searchParams.set("returnTo", scrollAwareReturnTo);
+    router.push(`${url.pathname}${url.search}${url.hash}`);
+  };
+
   return (
-    <button
-      type="button"
-      onClick={(event) => {
+    <span
+      role="link"
+      tabIndex={0}
+      onClick={handleNavigate}
+      onPointerDown={(event) => {
         event.preventDefault();
         event.stopPropagation();
-        const currentPath = `${window.location.pathname}${window.location.search}`;
-        const scrollAwareReturnTo = buildDashboardReturnTo(currentPath, window.scrollY);
-        window.history.replaceState(window.history.state, "", scrollAwareReturnTo);
-        const url = new URL(buildMethodologyMetricHref(sectionId), window.location.origin);
-        url.searchParams.set("returnTo", scrollAwareReturnTo);
-        window.location.assign(`${url.pathname}${url.search}${url.hash}`);
+      }}
+      onMouseDown={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          handleNavigate(event);
+        }
       }}
       className={cn(
-        "inline cursor-pointer appearance-none border-0 bg-transparent p-0 m-0 text-left align-baseline text-current underline decoration-current/45 underline-offset-4 [font:inherit] [line-height:inherit] [letter-spacing:inherit] hover:decoration-current",
+        "inline cursor-pointer align-baseline text-current underline decoration-current/45 underline-offset-4 [font:inherit] [line-height:inherit] [letter-spacing:inherit] [text-transform:inherit] hover:decoration-current focus-visible:decoration-current",
         className,
       )}
     >
       {children}
-    </button>
+    </span>
   );
 };

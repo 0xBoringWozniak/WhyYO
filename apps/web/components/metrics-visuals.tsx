@@ -181,12 +181,12 @@ export const CompositionCompare = ({
   target: Array<{ key: string; label: string; weightPct: number }>;
   title: string;
 }) => (
-  <div className="space-y-3">
+  <div className="flex h-full flex-col space-y-3">
     <div className="text-xs uppercase tracking-[0.18em] text-white/46">{title}</div>
-    <div className="grid gap-3 md:grid-cols-2">
-      <div className="space-y-2">
+    <div className="grid flex-1 gap-3 md:grid-cols-2">
+      <div className="flex h-full flex-col space-y-2">
         <div className="text-sm font-medium text-white/82">Current</div>
-        <div className="max-h-[228px] space-y-2 overflow-y-auto pr-2 [scrollbar-color:rgba(215,255,31,0.45)_transparent] [scrollbar-width:auto] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/45 [&::-webkit-scrollbar-track]:bg-transparent">
+        <div className="min-h-[228px] max-h-[228px] space-y-2 overflow-y-auto pr-2 [scrollbar-color:rgba(215,255,31,0.45)_transparent] [scrollbar-width:auto] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/45 [&::-webkit-scrollbar-track]:bg-transparent">
           {current.length > 0 ? (
             current.map((entry) => (
               <div key={entry.key} className="space-y-1">
@@ -204,9 +204,9 @@ export const CompositionCompare = ({
           )}
         </div>
       </div>
-      <div className="space-y-2">
+      <div className="flex h-full flex-col space-y-2">
         <div className="text-sm font-medium text-white/82">YO</div>
-        <div className="max-h-[228px] space-y-2 overflow-y-auto pr-2 [scrollbar-color:rgba(215,255,31,0.45)_transparent] [scrollbar-width:auto] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/45 [&::-webkit-scrollbar-track]:bg-transparent">
+        <div className="min-h-[228px] max-h-[228px] space-y-2 overflow-y-auto pr-2 [scrollbar-color:rgba(215,255,31,0.45)_transparent] [scrollbar-width:auto] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/45 [&::-webkit-scrollbar-track]:bg-transparent">
           {target.map((entry) => (
             <div key={entry.key} className="space-y-1">
               <div className="flex items-center justify-between text-sm text-white/68">

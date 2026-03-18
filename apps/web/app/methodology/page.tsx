@@ -330,7 +330,7 @@ export default function MethodologyPage() {
     const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
     const liveReturnTo = params?.get("returnTo") ?? returnTo;
     if (liveReturnTo) {
-      window.location.assign(liveReturnTo);
+      router.replace(liveReturnTo);
       return;
     }
     if (window.history.length > 1) {
