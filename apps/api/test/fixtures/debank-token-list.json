@@ -1,0 +1,18 @@
+[
+  {
+    "id": "0x0000000000085d4780b73119b644ae5ecd22b376",
+    "chain": "eth",
+    "name": "TrueUSD",
+    "symbol": "TUSD",
+    "optimized_symbol": "TUSD",
+    "decimals": 18,
+    "logo_url": "https://static.debank.com/image/eth_token/logo_url/0x0000000000085d4780b73119b644ae5ecd22b376/9fedba67e80a738c281bd0ba8e9f1c5e.png",
+    "protocol_id": "",
+    "price": 1,
+    "is_core": true,
+    "is_wallet": true,
+    "time_at": 1546294558,
+    "amount": 21.709487132565773,
+    "raw_amount": 21709487132565774000
+  }
+]

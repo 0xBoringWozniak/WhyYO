@@ -1,0 +1,11 @@
+[
+  {
+    "id": "boba",
+    "community_id": 288,
+    "name": "Boba",
+    "native_token_id": "boba",
+    "born_at": 1704711812,
+    "logo_url": "https://static.debank.com/image/chain/logo_url/boba/e43d79cd8088ceb3ea3e4a240a75728f.png",
+    "wrapped_token_id": "0xdeaddeaddeaddeaddeaddeaddeaddeaddead0000"
+  }
+]

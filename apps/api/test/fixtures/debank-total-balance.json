@@ -1,0 +1,23 @@
+{
+  "total_usd_value": 27654.142997146177,
+  "chain_list": [
+    {
+      "id": "eth",
+      "community_id": 1,
+      "name": "Ethereum",
+      "native_token_id": "eth",
+      "logo_url": "https://static.debank.com/image/chain/logo_url/eth/42ba589cd077e7bdd97db6480b0ff61d.png",
+      "wrapped_token_id": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "usd_value": 11937.702345945296
+    },
+    {
+      "id": "arb",
+      "community_id": 42161,
+      "name": "Arbitrum",
+      "native_token_id": "arb",
+      "logo_url": "https://static.debank.com/image/chain/logo_url/arb/f6d1b236259654d531a1459b2bccaf64.png",
+      "wrapped_token_id": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+      "usd_value": 3394.648029286528
+    }
+  ]
+}

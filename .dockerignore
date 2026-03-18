@@ -1,0 +1,13 @@
+.git
+.gitignore
+node_modules
+**/node_modules
+dist
+build
+.next
+coverage
+test_runs
+*.log
+.DS_Store
+apps/**/tsconfig.tsbuildinfo
+packages/**/tsconfig.tsbuildinfo

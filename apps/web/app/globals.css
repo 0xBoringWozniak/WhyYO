@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-fog font-sans text-ink antialiased;
+  background-image:
+    radial-gradient(circle at top right, rgba(215, 255, 31, 0.14), transparent 22%),
+    radial-gradient(circle at bottom left, rgba(22, 248, 143, 0.08), transparent 20%),
+    linear-gradient(180deg, #040404 0%, #090909 100%);
+}
+
+.grid-shell {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+  background-size: 96px 96px;
+}
+
+.yo-lines {
+  background-image: repeating-linear-gradient(
+    105deg,
+    rgba(215, 255, 31, 0.04) 0,
+    rgba(215, 255, 31, 0.04) 1px,
+    transparent 1px,
+    transparent 132px
+  );
+}
+
+.yo-display {
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(215, 255, 31, 0.28);
+  border-radius: 9999px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tv-boot {
+  animation: tv-boot 1.25s cubic-bezier(0.2, 0.8, 0.24, 1) forwards;
+}
+
+.tv-noise {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.03)),
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.07) 0,
+      rgba(255, 255, 255, 0.07) 2px,
+      transparent 2px,
+      transparent 6px
+    );
+  animation: tv-flicker 1.4s ease-in-out infinite;
+}
+
+@keyframes tv-boot {
+  0% {
+    transform: scale(0.62);
+    opacity: 0.18;
+    filter: blur(28px);
+  }
+  24% {
+    transform: scale(0.7, 0.18);
+    opacity: 0.55;
+    filter: blur(12px);
+  }
+  56% {
+    transform: scale(1.02, 0.92);
+    opacity: 0.96;
+    filter: blur(0);
+  }
+  78% {
+    transform: scale(1.01, 0.98);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes tv-flicker {
+  0%,
+  100% {
+    opacity: 0.22;
+  }
+  20% {
+    opacity: 0.3;
+  }
+  48% {
+    opacity: 0.14;
+  }
+  72% {
+    opacity: 0.26;
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "why-yo",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm --parallel --filter @whyyo/api --filter @whyyo/worker --filter @whyyo/web dev",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "test:e2e-live": "pnpm --filter @whyyo/api test:e2e-live",
+    "typecheck": "pnpm -r typecheck",
+    "format": "pnpm -r format",
+    "db:migrate": "pnpm --filter @whyyo/api migrate",
+    "risk:import": "pnpm --filter @whyyo/api risk:import",
+    "risk:verify": "pnpm --filter @whyyo/api risk:verify"
+  }
+}

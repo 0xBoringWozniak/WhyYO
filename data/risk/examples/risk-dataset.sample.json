@@ -1,0 +1,33 @@
+{
+  "code": "1",
+  "error": null,
+  "data": {
+    "pools": [
+      {
+        "id": "sample-pool-1",
+        "slug": "sample-usd-lending-ethereum",
+        "title": "Sample USD Lending",
+        "tvl": "1000000",
+        "risk": "B",
+        "yield": "4.2",
+        "assets": [
+          {
+            "id": "sample-asset-1",
+            "symbol": "USDC",
+            "parent_symbol": "USD",
+            "logo": null,
+            "asset_funding_group_id": null
+          }
+        ],
+        "blockchain": {
+          "id": "eth",
+          "name": "Ethereum",
+          "image_url": null
+        }
+      }
+    ],
+    "yo_pools": [],
+    "total_count": 1,
+    "count": 1
+  }
+}
