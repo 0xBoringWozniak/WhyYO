@@ -48,9 +48,9 @@ const thinkingPhrasesV0 = [
 const thinkingPhrases = [
   "Welcome to WHY YO?",
   "We'll help you get the most out of your DeFi assets with YO vaults",
-  "Loading portfolio data from on-chain",
+  "Getting on-chain portfolio",
   "Bucket-specific recommendations are preparing",
-  "Calculating risk scores and diversification metrics for your positions",
+  "Calculating risk scores and diversification metrics",
   "Determining optimal allocations and confidence levels",
   "Finalizing personalized comments with our AI agent",
 ];
@@ -642,7 +642,7 @@ const BucketOverviewCard = ({
       : topTokens;
 
   return (
-    <Card className="relative grid h-[82vh] min-h-[820px] max-h-[980px] grid-rows-[minmax(8.75rem,auto)_minmax(8.5rem,auto)_minmax(3.5rem,auto)_minmax(3.5rem,auto)_minmax(12.75rem,auto)_minmax(0,1fr)] gap-4 overflow-hidden">
+    <Card className="relative grid h-[82vh] min-h-[840px] max-h-[1000px] grid-rows-[minmax(8.75rem,auto)_minmax(8.5rem,auto)_minmax(3.5rem,auto)_minmax(3.5rem,auto)_minmax(11.5rem,auto)_minmax(0,1fr)] gap-4 overflow-hidden">
     <Badge
       tone={hasRecommendation ? "good" : "neutral"}
       className="absolute right-4 top-4 z-10 h-10 min-w-[86px] max-w-[86px] justify-center px-2 py-0 text-center text-[10px]"
@@ -719,7 +719,7 @@ const BucketOverviewCard = ({
       <div className="text-xs uppercase tracking-[0.2em] text-white/42">Protocol mix</div>
       <div className="min-h-0 space-y-2">
         {protocols.length > 0 ? (
-          <div className="max-h-[430px] min-h-[430px] space-y-2.5 overflow-y-auto pr-3 [scrollbar-color:rgba(215,255,31,0.55)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/55 [&::-webkit-scrollbar-track]:bg-transparent">
+          <div className="max-h-[470px] min-h-[470px] space-y-2.5 overflow-y-auto pr-3 [scrollbar-color:rgba(215,255,31,0.55)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/55 [&::-webkit-scrollbar-track]:bg-transparent">
             {protocols.map((protocol) => (
               <div
                 key={`${protocol.chain}:${protocol.canonicalProtocolId}:${protocol.usdValue}`}

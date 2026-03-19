@@ -20,10 +20,12 @@ const methodologyFaq: FaqItem[] = [
     question: "How WHY YO works?",
     answer: (
       <p>
-        WHY YO collects onchain wallet data, groups positions by bucket, and scores each bucket with portfolio risk
-        metrics. It then compares a move into the matching YO vault against the current setup to estimate whether the
-        portfolio improves. Recommendations are driven by both modeled metric impact and system trust, which is shown
-        through <span className={metricQuestionClass}>Confidence</span>.
+        WHY YO reads the wallet&apos;s onchain balances and productive DeFi positions, then groups them into{" "}
+        <span className={metricQuestionClass}>USD</span>, <span className={metricQuestionClass}>ETH</span>, and{" "}
+        <span className={metricQuestionClass}>BTC</span> buckets. Each bucket is scored on risk, concentration, idle
+        capital, and structure before being compared with the matching YO vault. A recommendation becomes stronger when
+        the modeled portfolio metrics improve and the trust layer supports the move, which is summarized by{" "}
+        <span className={metricQuestionClass}>Confidence</span>.
       </p>
     ),
   },
@@ -32,11 +34,11 @@ const methodologyFaq: FaqItem[] = [
     question: "How do buckets work?",
     answer: (
       <p>
-        Everything is split into <span className={metricQuestionClass}>USD</span>,{" "}
-        <span className={metricQuestionClass}>ETH</span>, and <span className={metricQuestionClass}>BTC</span>{" "}
-        buckets. Stablecoins compare only to <span className={metricQuestionClass}>yoUSD</span>, ETH-like assets only
-        to <span className={metricQuestionClass}>yoETH</span>, and BTC-like assets only to{" "}
-        <span className={metricQuestionClass}>yoBTC</span>. Cross-bucket comparisons are not ranked.
+        Every position is assigned to a single bucket. Stablecoins are compared only with{" "}
+        <span className={metricQuestionClass}>yoUSD</span>, ETH-like assets only with{" "}
+        <span className={metricQuestionClass}>yoETH</span>, and BTC-like assets only with{" "}
+        <span className={metricQuestionClass}>yoBTC</span>. This keeps recommendations comparable inside the same
+        asset family instead of mixing very different risk and yield profiles across buckets.
       </p>
     ),
   },
@@ -45,22 +47,19 @@ const methodologyFaq: FaqItem[] = [
     question: "How are recommendations ranked?",
     answer: (
       <div className="space-y-3">
-        <p>The ranker computes three intent-specific scores and then picks the best fit:</p>
+        <p>The engine scores each opportunity under three possible intents and keeps the one that fits best:</p>
         <ul className="list-disc space-y-2 pl-5">
           <li>
-            <span className={metricQuestionClass}>Risk improvement</span>: emphasizes weighted-risk reduction,
-            high-risk reduction, savings-score improvement, diversification, simplicity, and similarity, then subtracts
-            unknown-risk and small-size penalties.
+            <span className={metricQuestionClass}>Risk improvement</span> favors lower weighted risk, lower high-risk
+            exposure, stronger savings score, cleaner structure, and fewer unknown-heavy outcomes.
           </li>
           <li>
-            <span className={metricQuestionClass}>Diversification improvement</span>: emphasizes diversification gain,
-            concentration problems, strategy fit, and simplification, with smaller risk terms and the same penalty
-            logic.
+            <span className={metricQuestionClass}>Diversification improvement</span> favors a bucket that becomes less
+            concentrated across protocols and strategies without creating a clearly worse risk profile.
           </li>
           <li>
-            <span className={metricQuestionClass}>Idle deployment</span>: emphasizes idle share, idle USD size,
-            estimated yield opportunity, vault quality, and structure improvement, then penalizes weak coverage and
-            undersized buckets.
+            <span className={metricQuestionClass}>Idle deployment</span> favors meaningful idle balances that can move
+            into productive exposure with better yield potential and acceptable trust conditions.
           </li>
         </ul>
       </div>
@@ -71,11 +70,11 @@ const methodologyFaq: FaqItem[] = [
     question: "What does Suggested amount mean?",
     answer: (
       <p>
-        <span className={metricQuestionClass}>Suggested amount</span> is deterministic. The engine calculates
-        idle-first, high-risk-only, combined, 25%, 50%, and full-bucket presets. The highlighted value uses the
-        combined preset first, then falls back to idle-only, then high-risk-only, then 25% of the bucket. If the whole
-        bucket is under <span className={metricQuestionClass}>$250</span>, it shows the full bucket; otherwise it floors
-        the suggestion at <span className={metricQuestionClass}>$250</span> and caps it at bucket size.
+        <span className={metricQuestionClass}>Suggested amount</span> is a deterministic sizing output, not a manual
+        guess. The engine evaluates several presets such as idle-first, high-risk-only, combined, 25%, 50%, and
+        full-bucket, then chooses the first preset that best matches the recommendation logic. The final number is
+        bounded by the real bucket size, with a minimum floor of <span className={metricQuestionClass}>$250</span>{" "}
+        unless the whole bucket is smaller.
       </p>
     ),
   },
@@ -84,9 +83,10 @@ const methodologyFaq: FaqItem[] = [
     question: "What are the main limitations?",
     answer: (
       <p>
-        Public risk coverage in DeFi is incomplete, wrappers can hide underlying exposures, and APY is only a current
-        snapshot. The app therefore treats yield estimates as informational, keeps unknown-heavy cases visible, and
-        reduces recommendation pressure before making strong safety claims.
+        Public risk data in DeFi is still incomplete, wrapped assets can hide underlying exposures, and live yield is
+        only a snapshot. That means some positions carry unknown risk that cannot be measured perfectly. When coverage
+        is weak or the target vault looks too aggressive, the system reduces recommendation strength instead of making a
+        stronger claim than the data can support.
       </p>
     ),
   },
@@ -98,8 +98,10 @@ const metricFaq: FaqItem[] = [
     question: <span className={metricQuestionClass}>Risk coverage</span>,
     answer: (
       <p>
-        Bucket-level coverage tile in the overview cards. It shows what share of productive DeFi capital in the bucket
-        has public risk mapping.
+        <span className={metricQuestionClass}>Risk coverage</span> shows how much of the productive DeFi capital in a
+        bucket has public risk mapping. It is calculated as the covered share of productive positions, so idle balances
+        do not inflate it. Higher coverage increases trust in the recommendation, while low coverage can directly push{" "}
+        <span className={metricQuestionClass}>Confidence</span> down.
       </p>
     ),
   },
@@ -107,10 +109,27 @@ const metricFaq: FaqItem[] = [
     id: METHODOLOGY_SECTION_IDS.diversification,
     question: <span className={metricQuestionClass}>Diversification</span>,
     answer: (
-      <p>
-        This is the user-facing inverse of protocol concentration. Higher diversification means the productive DeFi
-        bucket is spread more broadly across protocols rather than concentrated in one place.
-      </p>
+      <div className="space-y-3">
+        <p>
+          <span className={metricQuestionClass}>Diversification</span> tells you how broadly a bucket is spread across
+          protocols instead of being concentrated in one or two places. Higher diversification means the bucket depends
+          less on a single protocol dominating the outcome.
+        </p>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>
+            It is derived from <span className={metricQuestionClass}>protocol concentration</span>. As concentration
+            falls, diversification rises.
+          </li>
+          <li>
+            Only productive DeFi positions are used for this calculation, because idle balances do not create protocol
+            diversification.
+          </li>
+          <li>
+            It affects both recommendation ranking and <span className={metricQuestionClass}>Confidence</span> through
+            the portfolio-impact side of the model.
+          </li>
+        </ul>
+      </div>
     ),
   },
   {
@@ -118,8 +137,10 @@ const metricFaq: FaqItem[] = [
     question: <span className={metricQuestionClass}>Weighted risk (WRS)</span>,
     answer: (
       <p>
-        Average risk score of productive DeFi positions only. Idle balances are excluded so idle wallet assets cannot
-        artificially make a risky DeFi bucket look safer.
+        <span className={metricQuestionClass}>Weighted risk</span> is the capital-weighted average risk score of the
+        productive DeFi positions in the bucket. Larger positions influence the result more than smaller ones, and idle
+        balances are excluded entirely. Lower weighted risk means the active part of the bucket is safer on average,
+        which strengthens both ranking and portfolio impact.
       </p>
     ),
   },
@@ -127,7 +148,13 @@ const metricFaq: FaqItem[] = [
     id: METHODOLOGY_SECTION_IDS.highRiskExposure,
     question: <span className={metricQuestionClass}>High-risk exposure (HRE)</span>,
     answer: (
-      <p>Share of productive DeFi capital sitting in positions mapped to risk score 3 or higher.</p>
+      <p>
+        <span className={metricQuestionClass}>High-risk exposure</span> measures what share of productive DeFi capital
+        sits in positions mapped to risk score <span className={metricQuestionClass}>3 or higher</span>. It is
+        calculated as a percent of the productive bucket, not of the whole wallet. Lower high-risk exposure means less
+        capital is concentrated in the riskiest slice of the bucket, which improves the portfolio-impact side of the
+        recommendation.
+      </p>
     ),
   },
   {
@@ -135,8 +162,10 @@ const metricFaq: FaqItem[] = [
     question: <span className={metricQuestionClass}>Savings score (SPS)</span>,
     answer: (
       <p>
-        A heuristic 0-100 quality score. It combines risk, high-risk share, concentration, structural complexity,
-        unknown coverage drag, and idle drag into one user-facing summary. Higher is better, but it is not a forecast.
+        <span className={metricQuestionClass}>Savings score</span> is a composite 0-100 quality metric for the bucket.
+        It combines weighted risk, high-risk share, concentration, structural complexity, unknown-risk drag, and idle
+        drag into one summary number. Higher savings score means the bucket looks cleaner and more efficient under the
+        current model, and improvements here strengthen both recommendation ranking and portfolio impact.
       </p>
     ),
   },
@@ -146,11 +175,13 @@ const metricFaq: FaqItem[] = [
     answer: (
       <div className="space-y-3">
         <p>
-          Confidence combines portfolio improvement and system trust into one final label for the recommendation.
+          <span className={metricQuestionClass}>Confidence</span> tells you how strongly the system stands behind a
+          recommendation after checking both modeled improvement and trust conditions. It is the final summary of
+          whether a move looks not only better on paper, but also well-supported by the available data.
         </p>
         <ul className="list-disc space-y-2 pl-5">
           <li>
-            Portfolio deltas are weighted as Weighted risk{" "}
+            Portfolio impact is built from four deltas: Weighted risk{" "}
             <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.weightedRisk}%</span>,
             Savings score{" "}
             <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.savingsScore}%</span>,
@@ -160,7 +191,7 @@ const metricFaq: FaqItem[] = [
             <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.highRiskExposure}%</span>.
           </li>
           <li>
-            Trust metrics are weighted as Coverage{" "}
+            Trust is built from Coverage{" "}
             <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.coverage}%</span>,
             Vault high-risk{" "}
             <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.vaultHighRisk}%</span>,
@@ -169,13 +200,13 @@ const metricFaq: FaqItem[] = [
             <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.yoShare}%</span>.
           </li>
           <li>
-            Each portfolio component is converted into a ratio score in the range{" "}
+            Each portfolio delta is converted into a ratio score in the range{" "}
             <span className={metricQuestionClass}>[-1, 1]</span>: lower-is-better metrics use{" "}
             <span className={metricQuestionClass}>before / after - 1</span>, higher-is-better metrics use{" "}
             <span className={metricQuestionClass}>after / before - 1</span>.
           </li>
           <li>
-            Hard-low rules apply before anything else: Coverage{" "}
+            Hard-low rules apply before banding: Coverage{" "}
             <span className={metricQuestionClass}>{"<"}{RECOMMENDATION_CONFIDENCE_CONFIG.hardLowRules.coverageMin}%</span>,
             too many red trust metrics, or too many non-improving portfolio deltas force{" "}
             <span className={metricQuestionClass}>LOW</span>.
@@ -185,7 +216,10 @@ const metricFaq: FaqItem[] = [
             <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.bandThresholds.impact.highMin}</span>,
             <span className={metricQuestionClass}> MEDIUM</span> above{" "}
             <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.bandThresholds.impact.mediumMin}</span>,
-            otherwise <span className={metricQuestionClass}>LOW</span>. Trust still acts as the ceiling.
+            otherwise <span className={metricQuestionClass}>LOW</span>. The final label becomes{" "}
+            <span className={metricQuestionClass}>HIGH</span> only when both trust and impact are strong; otherwise
+            trust can cap the outcome at <span className={metricQuestionClass}>MEDIUM</span> or{" "}
+            <span className={metricQuestionClass}>LOW</span>.
           </li>
         </ul>
       </div>
@@ -196,8 +230,11 @@ const metricFaq: FaqItem[] = [
     question: <span className={metricQuestionClass}>Coverage</span>,
     answer: (
       <p>
-        Trust-layer label for the same underlying coverage metric. In recommendation cards it is shown as a percent and
-        toned by thresholds: above 60% green, 30-60% yellow, below 30% red.
+        <span className={metricQuestionClass}>Coverage</span> is the trust-layer reading of the same underlying risk
+        coverage. It is interpreted with thresholds: above <span className={metricQuestionClass}>60%</span> is green,{" "}
+        <span className={metricQuestionClass}>30-60%</span> is yellow, and below{" "}
+        <span className={metricQuestionClass}>30%</span> is red. Low coverage weakens trust in the recommendation and
+        can trigger a hard-low outcome for <span className={metricQuestionClass}>Confidence</span>.
       </p>
     ),
   },
@@ -205,7 +242,13 @@ const metricFaq: FaqItem[] = [
     id: METHODOLOGY_SECTION_IDS.vaultHighRisk,
     question: <span className={metricQuestionClass}>Vault high-risk</span>,
     answer: (
-      <p>Share of the target YO vault allocated to underlying positions mapped to risk score 3 or higher.</p>
+      <p>
+        <span className={metricQuestionClass}>Vault high-risk</span> measures what share of the target YO vault is
+        allocated to underlying positions mapped to risk score <span className={metricQuestionClass}>3 or higher</span>.
+        It describes the risk profile of the destination vault rather than the current bucket. Lower vault high-risk
+        improves the trust layer and helps the system stay confident that the recommendation is not solving one problem
+        by creating another.
+      </p>
     ),
   },
   {
@@ -215,8 +258,14 @@ const metricFaq: FaqItem[] = [
       <div className="space-y-3">
         <div id={METHODOLOGY_SECTION_IDS.yoShare} className="scroll-mt-6" />
         <p>
-          Overlap between the user&apos;s current productive protocol mix and the target YO vault protocol mix. Lower
-          overlap means YO is taking the bucket to a more different protocol set.
+          <span className={metricQuestionClass}>Overlap</span> measures how similar the current productive protocol mix
+          is to the target YO vault protocol mix. Lower overlap means the move introduces a meaningfully different
+          protocol set instead of recreating what the bucket already has.
+        </p>
+        <p>
+          <span className={metricQuestionClass}>YO share</span> measures how much of the current bucket is already
+          allocated to the same target YO vault. Lower YO share makes the recommendation less redundant and supports
+          trust that the move is adding something new rather than just increasing an existing YO position.
         </p>
       </div>
     ),
@@ -299,7 +348,7 @@ export default function MethodologyPage() {
             <span className={metricQuestionClass}>Weighted risk</span>,{" "}
             <span className={metricQuestionClass}>High-risk exposure</span>,{" "}
             <span className={metricQuestionClass}>Vault high-risk</span> are better.{" "}
-            <span className="font-semibold text-[#ffd84d]">Confidence</span> shows the strength of recommendations.
+            <span className={metricQuestionClass}>Confidence</span> shows the strength of recommendations.
           </p>
           <div className="flex flex-wrap gap-3">
             <button
