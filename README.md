@@ -1,5 +1,9 @@
 # WhyYO
 
+<p align="center">
+  <img src="./why_yo_logo.png" alt="WhyYO logo" width="220" />
+</p>
+
 WhyYO is a DeFi portfolio scanner and recommendation engine for YO vaults. It connects a wallet, normalizes positions from external providers, computes risk and concentration metrics across `USD` / `ETH` / `BTC` buckets, compares the current portfolio with available YO strategies, and highlights where allocation can be simplified or idle capital can be activated.
 
 The recommendation engine is deterministic: metrics and decision rules are computed first, and explanation text is added on top afterward.
