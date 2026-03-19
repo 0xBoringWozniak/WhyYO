@@ -1,15 +1,17 @@
 import { buildExplanationInput, computeBucketMetrics } from "@whyyo/domain";
 import type { ScanResponse } from "@whyyo/shared";
 
+import { getEnv } from "../config/env";
+import { ScanCacheRepository } from "../repositories/scan-cache-repository";
 import { ScanRepository } from "../repositories/scan-repository";
 import { DebankService } from "./debank-service";
 import { buildFallbackExplanation, ExplanationService } from "./explanation-service";
 import { PortfolioService } from "./portfolio-service";
 import { YoVaultReadService } from "./yo-vault-read-service";
-import { getEnv } from "../config/env";
 
 export class ScanService {
   constructor(
+    private readonly scanCacheRepository = new ScanCacheRepository(),
     private readonly scanRepository = new ScanRepository(),
     private readonly debankService = new DebankService(),
     private readonly yoVaultReadService = new YoVaultReadService(),
@@ -17,7 +19,16 @@ export class ScanService {
     private readonly explanationService = new ExplanationService(),
   ) {}
 
-  async startScan(walletAddress: string): Promise<ScanResponse> {
+  async startScan(walletAddress: string, options: { forceRefresh?: boolean } = {}): Promise<ScanResponse> {
+    if (!options.forceRefresh) {
+      const cached = await this.scanCacheRepository.get(walletAddress);
+      if (cached) {
+        return cached;
+      }
+    } else {
+      await this.scanCacheRepository.clear(walletAddress);
+    }
+
     const scanId = await this.scanRepository.createScanSession(walletAddress);
     const [debankResult, yo] = await Promise.all([
       this.debankService.fetchUserBundle(walletAddress).then(
@@ -203,6 +214,7 @@ export class ScanService {
     }
 
     await this.scanRepository.persistResult({ scanId, response });
+    await this.scanCacheRepository.set(walletAddress, response);
     return response;
   }
 

@@ -35,6 +35,7 @@ const withScrollQuery = (path: string, scrollY: number) => {
 
 const normalizeDashboardPath = (path: string) => {
   const url = new URL(path, window.location.origin);
+  url.searchParams.delete("connect");
   if (url.pathname === "/" && url.searchParams.get("resume") !== "1") {
     url.searchParams.set("resume", "1");
   }

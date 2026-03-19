@@ -9,6 +9,7 @@ import { getRecommendationConfidence } from "../lib/recommendation-confidence";
 import { useYoAllowance, useYoApprove, useYoDeposit } from "../lib/yo-sdk";
 import { cn, formatPct, formatUsd } from "../lib/utils";
 import { AssetIcon } from "./asset-icon";
+import { ConfidenceBadge } from "./confidence-badge";
 import { MethodologyLink, METHODOLOGY_SECTION_IDS } from "./methodology-link";
 import { renderLinkedMetricText } from "./recommendation-explanation";
 import { Button, Card } from "./ui";
@@ -44,7 +45,6 @@ const isEvmAddress = (value: string) => /^0x[a-fA-F0-9]{40}$/.test(value);
 
 const formatDelta = (before: number | null | undefined, after: number | null | undefined, digits = 2) =>
   before == null || after == null ? null : `${before.toFixed(digits)} → ${after.toFixed(digits)}`;
-
 const MetricHighlight = ({ children }: { children: React.ReactNode }) => <span className="font-semibold text-lime">{children}</span>;
 const MetricHighlightLink = ({
   sectionId,
@@ -334,14 +334,9 @@ export const DepositDrawer = ({
                   className="h-16 w-16 border-transparent"
                 />
                 <div>
-                  <div className="text-xs uppercase tracking-[0.22em] text-white/45">
-                    {isIdleExecution ? "Idle deposit route" : "Portfolio move plan"}
-                  </div>
-                  <h3 className="mt-2 text-3xl font-semibold text-white">{recommendation.vaultSymbol}</h3>
-                  <div className="mt-2 text-base text-white/58">
-                    {recommendation.bucket} bucket ·{" "}
-                    <span className="text-[#ffd84d]">{recommendation.primaryIntent.replaceAll("_", " ")}</span>
-                  </div>
+                  <h3 className="text-[1.55rem] font-semibold text-white">
+                    {recommendation.bucket} Bucket · {isIdleExecution ? "Idle Deposit" : "Preview Deposit"}
+                  </h3>
                 </div>
               </div>
             </div>
@@ -361,17 +356,8 @@ export const DepositDrawer = ({
                     <div className="text-xs uppercase tracking-[0.18em] text-white/38">
                       <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.confidence}>Confidence</MethodologyLink>
                     </div>
-                    <div
-                      className={cn(
-                        "mt-3 text-3xl font-semibold",
-                        confidence.label === "HIGH"
-                          ? "text-lime"
-                          : confidence.label === "MEDIUM"
-                            ? "text-[#ffd84d]"
-                            : "text-[#ff6b6b]",
-                      )}
-                    >
-                      {confidence.label}
+                    <div className="mt-4">
+                      <ConfidenceBadge label={confidence.label} className={confidence.className} />
                     </div>
                   </div>
                 </div>
@@ -393,10 +379,8 @@ export const DepositDrawer = ({
 
                     <div className="grid gap-4">
                       <div className="text-base text-white/74">
-                        Balance: {formatUsd(idleSourcePlan.availableUsd)}
-                        <div className="mt-1 text-sm text-white/48">
-                          {formatAmount(idleSourcePlan.availableAmount)} {idleSourcePlan.symbol}
-                        </div>
+                        Balance: {formatUsd(idleSourcePlan.availableUsd)} · {formatAmount(idleSourcePlan.availableAmount)}{" "}
+                        {idleSourcePlan.symbol}
                       </div>
                     </div>
 
@@ -427,7 +411,11 @@ export const DepositDrawer = ({
                         ))}
                       </div>
                       <div className="mt-4 flex justify-center">
-                        {hasDirectIdleRoute ? (
+                        {!walletAddress ? (
+                          <Button variant="secondary" onClick={onConnectRequest}>
+                            Connect
+                          </Button>
+                        ) : hasDirectIdleRoute ? (
                           <IdleExecutionActions
                             recommendation={recommendation}
                             walletAddress={walletAddress}
@@ -436,10 +424,6 @@ export const DepositDrawer = ({
                             txSymbol={txSymbol}
                             setStatus={setStatus}
                           />
-                        ) : !walletAddress ? (
-                          <Button variant="secondary" onClick={onConnectRequest}>
-                            Connect
-                          </Button>
                         ) : (
                           <div className="group inline-flex min-w-[180px] justify-center rounded-full border border-white/10 bg-white/6 px-6 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white/72 transition hover:border-lime/40 hover:text-lime">
                             <span className="group-hover:hidden">Deposit</span>
@@ -487,7 +471,7 @@ export const DepositDrawer = ({
               </div>
 
               <div className="space-y-3 rounded-[26px] border border-white/8 bg-[#171717] p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-white/42">Why it may make sense</div>
+                <div className="text-xs uppercase tracking-[0.2em] text-white/42">Why YO Agent Comment</div>
 
                 <div className="rounded-[22px] border border-white/10 bg-black/35 p-4 text-[1.02rem] leading-8 text-white/78">
                   {hasLlmExplanation ? (

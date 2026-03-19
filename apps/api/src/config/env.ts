@@ -16,6 +16,7 @@ const envSchema = z.object({
   DEBANK_BASE_URL: z.string().default("https://pro-openapi.debank.com"),
   DEBANK_CACHE_TTL_SEC: z.coerce.number().default(90),
   DEBANK_TIMEOUT_MS: z.coerce.number().default(8000),
+  SCAN_CACHE_TTL_SEC: z.coerce.number().default(900),
   YO_PARTNER_ID: z.string().optional(),
   YO_DEFAULT_SLIPPAGE_BPS: z.coerce.number().default(50),
   YO_API_TIMEOUT_MS: z.coerce.number().default(8000),

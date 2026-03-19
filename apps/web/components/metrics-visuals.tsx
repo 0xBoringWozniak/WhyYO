@@ -40,6 +40,15 @@ export const BeforeAfterBars = ({
 }: {
   metrics: RankedRecommendation["visualization"]["beforeAfterBars"];
 }) => {
+  const metricOrder: Record<RankedRecommendation["visualization"]["beforeAfterBars"][number]["key"], number> = {
+    weighted_risk: 0,
+    diversification_score: 1,
+    high_risk_exposure: 2,
+    savings_score: 3,
+  };
+  const orderedMetrics = [...metrics].sort(
+    (left, right) => (metricOrder[left.key] ?? Number.MAX_SAFE_INTEGER) - (metricOrder[right.key] ?? Number.MAX_SAFE_INTEGER),
+  );
   const sectionIdByMetricKey: Partial<Record<RankedRecommendation["visualization"]["beforeAfterBars"][number]["key"], string>> = {
     weighted_risk: METHODOLOGY_SECTION_IDS.weightedRisk,
     high_risk_exposure: METHODOLOGY_SECTION_IDS.highRiskExposure,
@@ -49,7 +58,7 @@ export const BeforeAfterBars = ({
 
   return (
     <div className="space-y-5">
-      {metrics.map((metric) => {
+      {orderedMetrics.map((metric) => {
         const improved = isImproved(metric);
 
         return (
@@ -150,27 +159,34 @@ export const SimplificationVisual = ({
 }: {
   beforePositions: number;
   afterPositions: number;
-}) => (
-  <div className="rounded-2xl border border-white/8 bg-[#121212] p-4">
-    <div className="flex items-center justify-between text-base">
-      <div>
-        <div className="text-xs uppercase tracking-[0.18em] text-white/40">Structure</div>
-        <div className="mt-1 font-medium text-white/82">
-          {beforePositions} positions {"->"} {afterPositions} target positions
+}) => {
+  const beforeDotCount = Math.min(beforePositions, 10);
+  const afterDotCount = Math.min(afterPositions, 10);
+  const dotClassName =
+    Math.max(beforeDotCount, afterDotCount) >= 9 ? "h-2 w-2 rounded-full" : "h-2.5 w-2.5 rounded-full";
+
+  return (
+    <div className="rounded-2xl border border-white/8 bg-[#121212] p-4">
+      <div className="flex items-center justify-between gap-4 text-base">
+        <div>
+          <div className="text-xs uppercase tracking-[0.18em] text-white/40">Structure</div>
+          <div className="mt-1 font-medium text-white/82">
+            {beforePositions} positions {"->"} {afterPositions} target positions
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-1">
+          {Array.from({ length: beforeDotCount }).map((_, index) => (
+            <span key={`before-${index}`} className={cn(dotClassName, "bg-white/25")} />
+          ))}
+          <span className="mx-2 text-white/30">{"->"}</span>
+          {Array.from({ length: afterDotCount }).map((_, index) => (
+            <span key={`after-${index}`} className={cn(dotClassName, "bg-lime")} />
+          ))}
         </div>
       </div>
-      <div className="flex items-center gap-1">
-        {Array.from({ length: Math.min(beforePositions, 8) }).map((_, index) => (
-          <span key={`before-${index}`} className="h-2.5 w-2.5 rounded-full bg-white/25" />
-        ))}
-        <span className="mx-2 text-white/30">{"->"}</span>
-        {Array.from({ length: Math.min(afterPositions, 4) }).map((_, index) => (
-          <span key={`after-${index}`} className="h-2.5 w-2.5 rounded-full bg-lime" />
-        ))}
-      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export const CompositionCompare = ({
   current,
@@ -186,7 +202,7 @@ export const CompositionCompare = ({
     <div className="grid flex-1 gap-3 md:grid-cols-2">
       <div className="flex h-full flex-col space-y-2">
         <div className="text-sm font-medium text-white/82">Current</div>
-        <div className="min-h-[228px] max-h-[228px] space-y-2 overflow-y-auto pr-2 [scrollbar-color:rgba(215,255,31,0.45)_transparent] [scrollbar-width:auto] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/45 [&::-webkit-scrollbar-track]:bg-transparent">
+        <div className="min-h-[228px] max-h-[228px] space-y-2 overflow-y-auto pr-3 [scrollbar-color:rgba(215,255,31,0.45)_transparent] [scrollbar-width:auto] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/45 [&::-webkit-scrollbar-track]:bg-transparent">
           {current.length > 0 ? (
             current.map((entry) => (
               <div key={entry.key} className="space-y-1">
@@ -206,7 +222,7 @@ export const CompositionCompare = ({
       </div>
       <div className="flex h-full flex-col space-y-2">
         <div className="text-sm font-medium text-white/82">YO</div>
-        <div className="min-h-[228px] max-h-[228px] space-y-2 overflow-y-auto pr-2 [scrollbar-color:rgba(215,255,31,0.45)_transparent] [scrollbar-width:auto] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/45 [&::-webkit-scrollbar-track]:bg-transparent">
+        <div className="min-h-[228px] max-h-[228px] space-y-2 overflow-y-auto pr-3 [scrollbar-color:rgba(215,255,31,0.45)_transparent] [scrollbar-width:auto] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/45 [&::-webkit-scrollbar-track]:bg-transparent">
           {target.map((entry) => (
             <div key={entry.key} className="space-y-1">
               <div className="flex items-center justify-between text-sm text-white/68">

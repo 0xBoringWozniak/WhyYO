@@ -15,7 +15,7 @@ export const registerScanRoutes = async (app: FastifyInstance): Promise<void> =>
 
   app.post("/api/v1/scan/refresh", async (request, reply) => {
     const parsed = scanRequestSchema.parse(request.body);
-    const response = await scanService.startScan(parsed.walletAddress);
+    const response = await scanService.startScan(parsed.walletAddress, { forceRefresh: true });
     return reply.send(response);
   });
 

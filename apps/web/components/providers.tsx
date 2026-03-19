@@ -10,6 +10,7 @@ import { WALLET_SESSION_EVENT, isWalletReconnectEnabled, wagmiConfig } from "../
 import { YieldProvider } from "../lib/yo-sdk";
 
 const queryClient = new QueryClient();
+const isWalletAddressPath = (pathname: string | null) => /^\/0x[a-fA-F0-9]{40}$/.test(pathname ?? "");
 
 export const Providers = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
@@ -17,7 +18,8 @@ export const Providers = ({ children }: { children: ReactNode }) => {
   const [reconnectOnMount, setReconnectOnMount] = React.useState(false);
   const resumeParam = searchParams.get("resume");
   const connectParam = searchParams.get("connect");
-  const allowReconnectForRoute = pathname !== "/" || (resumeParam === "1" && connectParam !== "1");
+  const allowReconnectForRoute =
+    (!isWalletAddressPath(pathname) && pathname !== "/") || (resumeParam === "1" && connectParam !== "1");
 
   React.useEffect(() => {
     setReconnectOnMount(isWalletReconnectEnabled() && allowReconnectForRoute);

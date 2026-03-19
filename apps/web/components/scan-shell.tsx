@@ -22,6 +22,7 @@ import { cn, formatPct, formatUsd } from "../lib/utils";
 import { setWalletReconnectEnabled } from "../lib/wagmi";
 import { useScanStore } from "../store/use-scan-store";
 import { AssetIcon } from "./asset-icon";
+import { ConfidenceBadge } from "./confidence-badge";
 import { MethodologyLink, METHODOLOGY_SECTION_IDS, buildDashboardReturnTo, restoreDashboardScrollFromUrl } from "./methodology-link";
 import { BeforeAfterBars, CompositionCompare, SimplificationVisual, StackedBar } from "./metrics-visuals";
 import { Badge, Button, Card } from "./ui";
@@ -35,26 +36,35 @@ const scanningSteps = [
 ];
 
 const thinkingPhrases = [
-  "Loading your portfolio from blockchain...",
-  "Classifying spot balances and DeFi positions...",
-  "Mapping productive positions into buckets...",
-  "Calculating weighted risk and high-risk exposure...",
-  "Measuring diversification and concentration...",
-  "Checking public risk coverage and unknown exposure...",
-  "Comparing current buckets with YO vaults...",
-  "Sizing the next move and building recommendations...",
-  "Calculating current-vs-YO deltas...",
-  "Tracing idle capital across chains...",
-  "Matching protocols with public risk coverage...",
-  "Testing concentration reduction scenarios...",
-  "Ranking next moves inside each bucket...",
-  "Preparing recommendation rationale...",
-  "Letting the numbers speak...",
+  "Loading data from blockchain.",
+  "Collecting risk scores.",
+  "Idle assets are scored separately from productive DeFi positions.",
+  "Diversification is measured across protocols, chains, and strategies.",
+  "YO recommendations are bucket-specific.",
+  "Unknown coverage lowers recommendation confidence.",
+  "LLM agent creates personal explanation.",
 ];
 
 const formatCoverage = (value: number | null) => (value === null ? "n/a" : formatPct(value * 100));
 const formatDiversification = (value: number | null) => (value === null ? "n/a" : formatPct((1 - value) * 100));
 const shortenAddress = (value?: string) => (value ? `${value.slice(0, 6)}...${value.slice(-4)}` : "Not connected");
+const formatAnalyzedValue = (value: number) => {
+  const absValue = Math.abs(value);
+  if (absValue < 100_000) return formatUsd(value);
+  if (absValue < 1_000_000) {
+    const compact = value / 1_000;
+    const digits = Math.abs(compact) >= 100 ? 0 : 1;
+    return `$${compact.toFixed(digits)}k`;
+  }
+  const compact = value / 1_000_000;
+  const digits = Math.abs(compact) >= 100 ? 0 : Math.abs(compact) >= 10 ? 1 : 2;
+  return `$${compact.toFixed(digits)}M`;
+};
+const formatIntentLabel = (value: string) =>
+  value
+    .split("_")
+    .map((part) => (part ? `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}` : part))
+    .join(" ");
 const formatReadableValue = (value: number | null, formatter: (value: number) => string, fallback: string) =>
   value === null ? fallback : formatter(value);
 const getDisplayPositionCount = ({
@@ -343,6 +353,13 @@ class SectionErrorBoundary extends React.Component<
   }
 }
 
+const OverlayBackdrop = () => (
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute left-1/2 top-1/2 h-[26rem] w-[44rem] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-lime/8 blur-[120px]"
+  />
+);
+
 const IntroOverlay = ({
   stage,
   onEnter,
@@ -353,20 +370,101 @@ const IntroOverlay = ({
   if (stage === "active" || stage === "connect") return null;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-hidden bg-black">
+      <style jsx>{`
+        @keyframes yoIntroGlow {
+          0%,
+          100% {
+            transform: scale(1);
+            box-shadow:
+              0 0 46px rgba(215, 255, 31, 0.16),
+              0 0 120px rgba(215, 255, 31, 0.1);
+          }
+          50% {
+            transform: scale(1.018);
+            box-shadow:
+              0 0 80px rgba(215, 255, 31, 0.3),
+              0 0 180px rgba(215, 255, 31, 0.18);
+          }
+        }
+
+        @keyframes yoIntroBloom {
+          0%,
+          100% {
+            opacity: 0.2;
+            transform: scale(0.94);
+          }
+          50% {
+            opacity: 0.42;
+            transform: scale(1.12);
+          }
+        }
+
+        @keyframes yoBootFlash {
+          0% {
+            opacity: 0;
+            transform: scale(0.94);
+            filter: blur(18px);
+          }
+          24% {
+            opacity: 1;
+            transform: scale(1.03);
+            filter: blur(0);
+          }
+          60% {
+            opacity: 1;
+            transform: scale(1);
+            filter: blur(0);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(1.08);
+            filter: blur(12px);
+          }
+        }
+      `}</style>
+      <OverlayBackdrop />
       {stage === "intro" ? (
         <button
           type="button"
-          className="group flex h-32 w-[28rem] max-w-[88vw] items-center justify-center rounded-[34px] bg-lime px-10 text-center text-black shadow-[0_0_120px_rgba(215,255,31,0.16)] transition duration-500 hover:scale-[1.01]"
+          aria-label="Enter WHY YO"
+          className="group flex h-full w-full cursor-pointer items-center justify-center bg-transparent focus-visible:outline-none"
           onClick={onEnter}
         >
-          <span className="yo-display text-[3.9rem] leading-none">WHY YO</span>
+          <div
+            className="relative flex h-32 w-[28rem] max-w-[88vw] items-center justify-center rounded-[34px] border border-lime/24 bg-lime px-10 text-center text-black transition duration-500 group-hover:scale-[1.015] group-focus-visible:scale-[1.015] group-focus-visible:ring-2 group-focus-visible:ring-lime/70"
+            style={{ animation: "yoIntroGlow 2.45s ease-in-out infinite" }}
+          >
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-[-24%] rounded-[52px] bg-lime/22 blur-[62px]"
+              style={{ animation: "yoIntroBloom 2.45s ease-in-out infinite" }}
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-[-44%] rounded-[74px] bg-lime/12 blur-[130px]"
+              style={{ animation: "yoIntroBloom 2.45s ease-in-out infinite" }}
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 rounded-[34px] bg-[linear-gradient(180deg,rgba(255,255,255,0.2),rgba(255,255,255,0.02)_42%,rgba(0,0,0,0.04)_100%)] opacity-80"
+            />
+            <span className="relative z-10 yo-display text-[3.9rem] leading-none">WHY YO</span>
+          </div>
         </button>
       ) : (
         <div className="tv-boot relative flex h-full w-full items-center justify-center overflow-hidden bg-[#050505] text-black">
           <div className="tv-noise absolute inset-0 opacity-20" />
+          <div
+            aria-hidden="true"
+            className="absolute left-1/2 top-1/2 h-[26rem] w-[44rem] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-lime/8 blur-[120px]"
+            style={{ animation: "yoBootFlash 1s ease-out forwards" }}
+          />
           <div className="relative z-10 text-center">
-            <div className="mx-auto flex h-32 w-[30rem] max-w-[90vw] items-center justify-center rounded-[36px] bg-lime shadow-[0_0_90px_rgba(215,255,31,0.14)]">
+            <div
+              className="mx-auto flex h-32 w-[30rem] max-w-[90vw] items-center justify-center rounded-[36px] border border-lime/18 bg-lime shadow-[0_0_90px_rgba(215,255,31,0.14)]"
+              style={{ animation: "yoBootFlash 0.92s cubic-bezier(0.22,1,0.36,1) forwards" }}
+            >
               <div className="yo-display text-[4rem] leading-none">WHY YO</div>
             </div>
           </div>
@@ -394,8 +492,9 @@ const ConnectOverlay = ({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[68] flex items-center justify-center bg-black px-6">
-      <Card className="w-full max-w-[1100px] p-8">
+    <div className="fixed inset-0 z-[68] flex items-center justify-center overflow-hidden bg-black px-6">
+      <OverlayBackdrop />
+      <Card className="relative z-10 w-full max-w-[1100px] p-8">
         <div className="grid gap-4 md:grid-cols-[0.48fr_0.52fr]">
           <div className="rounded-[28px] border border-white/8 bg-black/45 p-6">
             <div className="text-xs uppercase tracking-[0.2em] text-white/42">Wallet connection</div>
@@ -466,20 +565,19 @@ const LoadingOverlay = ({
   const activePhrase = (thinkingPhrases[phraseIndex] ?? thinkingPhrases[0] ?? "").slice(0, visibleChars);
 
   return (
-    <div className="fixed inset-0 z-[66] flex items-center justify-center bg-black px-6">
-      <Card className="w-full max-w-[980px] p-6 text-center">
-        <div className="rounded-[28px] border border-white/8 bg-black/45 p-6 text-left">
-          <div className="flex min-h-[2.5rem] items-center gap-4 text-[1.45rem] leading-9 text-white md:text-[1.6rem]">
-            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-lime/35">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-lime border-t-transparent" />
-            </span>
-            <span className="min-w-0">
+    <div className="fixed inset-0 z-[66] flex items-center justify-center overflow-hidden bg-black px-6">
+      <OverlayBackdrop />
+      <div className="relative z-10 w-full max-w-[980px] text-left">
+        <div className="flex min-h-[2.5rem] items-center gap-4 text-[1.45rem] leading-9 text-white md:text-[1.6rem]">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-lime border-t-transparent" />
+          </span>
+          <span className="min-w-0">
             {activePhrase}
             <span className="ml-1 inline-block h-8 w-[2px] animate-pulse bg-lime align-middle" />
-            </span>
-          </div>
+          </span>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };
@@ -604,7 +702,7 @@ const BucketOverviewCard = ({
       <div className="text-xs uppercase tracking-[0.2em] text-white/42">Protocol mix</div>
       <div className="min-h-0 space-y-2">
         {protocols.length > 0 ? (
-          <div className="max-h-[430px] min-h-[430px] space-y-2.5 overflow-y-auto pr-1 [scrollbar-color:rgba(215,255,31,0.55)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/55 [&::-webkit-scrollbar-track]:bg-transparent">
+          <div className="max-h-[430px] min-h-[430px] space-y-2.5 overflow-y-auto pr-3 [scrollbar-color:rgba(215,255,31,0.55)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/55 [&::-webkit-scrollbar-track]:bg-transparent">
             {protocols.map((protocol) => (
               <div
                 key={`${protocol.chain}:${protocol.canonicalProtocolId}:${protocol.usdValue}`}
@@ -706,7 +804,7 @@ const RecommendationCard = ({
 
   return (
     <Card className="w-full min-w-full snap-start overflow-visible p-0">
-      <div className="border-b border-white/8 bg-black/50 px-4 py-4">
+      <div className="border-b border-white/8 px-4 py-3">
         <div className="flex flex-wrap items-start gap-5">
           <div className="flex items-center gap-4">
             <AssetIcon
@@ -717,11 +815,9 @@ const RecommendationCard = ({
               className="h-16 w-16 border-transparent"
             />
             <div>
-              <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.22em] text-white/42">
-                <span className="text-[#ffd84d]">{recommendation.primaryIntent.replaceAll("_", " ")}</span>
-              </div>
-              <h3 className="mt-2 text-[1.56rem] font-semibold leading-tight text-white">
-                {`${recommendation.bucket} Bucket`}
+              <h3 className="text-[1.42rem] font-semibold leading-tight text-white">
+                {recommendation.bucket} Bucket <span className="text-white/36">·</span>{" "}
+                <span className="text-[#ffd84d]">{formatIntentLabel(recommendation.primaryIntent)}</span>
               </h3>
             </div>
           </div>
@@ -741,10 +837,6 @@ const RecommendationCard = ({
                 <div className="space-y-4">
                   <StackedBar segments={recommendation.visualization.idleVsInvestedBar} />
                   <div className="grid gap-2 text-[0.96rem] text-white/74">
-                    <div>
-                      Productive {formatPct(recommendation.metrics.productiveSharePct * 100)} · Idle{" "}
-                      {formatPct(recommendation.metrics.idleSharePct * 100)}
-                    </div>
                     <div>Idle capital {formatUsd(recommendation.metrics.idleAssetUsd)}</div>
                     <div>Est. annual yield {formatUsd(recommendation.metrics.estimatedAnnualYieldOpportunityUsd ?? 0)}</div>
                     <div>Vault APY {formatPct(recommendation.metrics.vaultApyPct)}</div>
@@ -764,11 +856,7 @@ const RecommendationCard = ({
               <div className="mt-3 flex items-start justify-between gap-4">
                 <div className="font-display text-[3rem] leading-none text-lime">{formatUsd(recommendation.suggestedUsd)}</div>
                 <div className="pt-1">
-                  <span className={cn("inline-flex min-w-[108px] items-center justify-center rounded-full border px-4 py-2 text-[0.8rem] font-semibold uppercase tracking-[0.16em]", confidence.className)}>
-                    <MethodologyLink className="no-underline" sectionId={METHODOLOGY_SECTION_IDS.confidence}>
-                      {confidence.label}
-                    </MethodologyLink>
-                  </span>
+                  <ConfidenceBadge label={confidence.label} className={confidence.className} />
                 </div>
               </div>
               <div className="mt-6 space-y-3">
@@ -846,7 +934,7 @@ export const ScanShell = ({
   const searchParams = useSearchParams();
   const { connect, connectors, isPending: isConnecting } = useConnect();
   const { disconnect } = useDisconnect();
-  const { phase, scan, error, setPhase, setScan, setError } = useScanStore();
+  const { phase, scan, error, hasHydrated, setPhase, setScan, setError } = useScanStore();
   const [bootStage, setBootStage] = React.useState<BootStage>(initialBootStage ?? (initialWalletAddress ? "active" : "intro"));
   const [addressDraft, setAddressDraft] = React.useState(initialWalletAddress ?? "");
   const [forceConnectChoice, setForceConnectChoice] = React.useState(false);
@@ -854,9 +942,16 @@ export const ScanShell = ({
   const recommendationsScrollerRef = React.useRef<HTMLDivElement | null>(null);
   const [canScrollRecommendationsPrev, setCanScrollRecommendationsPrev] = React.useState(false);
   const [canScrollRecommendationsNext, setCanScrollRecommendationsNext] = React.useState(false);
+  const introAutoEnterTimeoutRef = React.useRef<number | null>(null);
+  const introBootTimeoutRef = React.useRef<number | null>(null);
+  const introTransitionStartedRef = React.useRef(false);
 
   const activeWalletAddress = initialWalletAddress ?? address ?? "";
-  const activeWalletLabel = initialWalletAddress ? "Guest address" : address ? "Connected wallet" : "Wallet";
+  const normalizedActiveWalletAddress = activeWalletAddress ? activeWalletAddress.toLowerCase() : "";
+  const normalizedScanOwnerAddress = scan?.portfolioOverview.ownerAddress?.toLowerCase() ?? "";
+  const scanMatchesActiveWallet = Boolean(normalizedActiveWalletAddress) && normalizedScanOwnerAddress === normalizedActiveWalletAddress;
+  const visibleScan = scanMatchesActiveWallet ? scan : null;
+  const isConnectedWalletView = Boolean(address && !initialWalletAddress);
   const resumeParam = searchParams.get("resume");
   const connectParam = searchParams.get("connect");
 
@@ -916,32 +1011,123 @@ export const ScanShell = ({
   });
 
   React.useEffect(() => {
+    if (!hasHydrated) return;
     if (bootStage !== "active" || !activeWalletAddress) return;
 
-    const normalized = activeWalletAddress.toLowerCase();
-    if (scan?.portfolioOverview.ownerAddress.toLowerCase() === normalized) {
-      lastAutoScannedWallet.current = normalized;
+    if (visibleScan?.portfolioOverview.ownerAddress.toLowerCase() === normalizedActiveWalletAddress) {
+      lastAutoScannedWallet.current = normalizedActiveWalletAddress;
       return;
     }
     if (phase === "scanning" || mutation.isPending) return;
-    if (lastAutoScannedWallet.current === normalized && (scan !== null || error !== null)) return;
+    if (lastAutoScannedWallet.current === normalizedActiveWalletAddress && (visibleScan !== null || error !== null)) return;
 
-    lastAutoScannedWallet.current = normalized;
+    lastAutoScannedWallet.current = normalizedActiveWalletAddress;
     mutation.mutate(activeWalletAddress);
-  }, [activeWalletAddress, bootStage, error, mutation, phase, scan, setError]);
+  }, [
+    activeWalletAddress,
+    bootStage,
+    error,
+    hasHydrated,
+    mutation,
+    normalizedActiveWalletAddress,
+    phase,
+    setError,
+    visibleScan,
+  ]);
 
-  const enterApp = () => {
+  React.useEffect(() => {
+    if (!hasHydrated) return;
+    if (!normalizedActiveWalletAddress) return;
+    if (!scan || scanMatchesActiveWallet) return;
+
+    setScan(null);
+    setPhase("idle");
+    setError(null);
+    lastAutoScannedWallet.current = null;
+  }, [hasHydrated, normalizedActiveWalletAddress, scan, scanMatchesActiveWallet, setError, setPhase, setScan]);
+
+  const clearIntroAutoTimer = React.useCallback(() => {
+    if (introAutoEnterTimeoutRef.current !== null) {
+      window.clearTimeout(introAutoEnterTimeoutRef.current);
+      introAutoEnterTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearIntroBootTimer = React.useCallback(() => {
+    if (introBootTimeoutRef.current !== null) {
+      window.clearTimeout(introBootTimeoutRef.current);
+      introBootTimeoutRef.current = null;
+    }
+  }, []);
+
+  const enterApp = React.useCallback(() => {
+    if (introTransitionStartedRef.current) return;
+
+    introTransitionStartedRef.current = true;
+    clearIntroAutoTimer();
+    clearIntroBootTimer();
     setBootStage("booting");
-    window.setTimeout(() => {
+    introBootTimeoutRef.current = window.setTimeout(() => {
       setBootStage(activeWalletAddress ? "active" : "connect");
-    }, 1050);
-  };
+      introBootTimeoutRef.current = null;
+    }, 920);
+  }, [activeWalletAddress, clearIntroAutoTimer, clearIntroBootTimer]);
+
+  React.useEffect(() => {
+    if (bootStage !== "intro") {
+      clearIntroAutoTimer();
+      return;
+    }
+
+    introTransitionStartedRef.current = false;
+    clearIntroAutoTimer();
+    introAutoEnterTimeoutRef.current = window.setTimeout(() => {
+      if (!introTransitionStartedRef.current) {
+        enterApp();
+      }
+      introAutoEnterTimeoutRef.current = null;
+    }, 2450);
+
+    return () => {
+      clearIntroAutoTimer();
+    };
+  }, [bootStage, clearIntroAutoTimer, enterApp]);
+
+  React.useEffect(
+    () => () => {
+      clearIntroAutoTimer();
+      clearIntroBootTimer();
+    },
+    [clearIntroAutoTimer, clearIntroBootTimer],
+  );
 
   React.useEffect(() => {
     if (bootStage === "connect" && activeWalletAddress && !forceConnectChoice) {
       setBootStage("active");
     }
   }, [activeWalletAddress, bootStage, forceConnectChoice]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (bootStage !== "active") return;
+    if (initialWalletAddress) return;
+
+    const url = new URL(window.location.href);
+    let changed = false;
+
+    if (url.searchParams.has("connect")) {
+      url.searchParams.delete("connect");
+      changed = true;
+    }
+    if (url.pathname === "/" && url.searchParams.get("resume") !== "1") {
+      url.searchParams.set("resume", "1");
+      changed = true;
+    }
+
+    if (changed) {
+      window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+  }, [bootStage, initialWalletAddress]);
 
   React.useEffect(() => {
     if (initialWalletAddress) return;
@@ -951,19 +1137,26 @@ export const ScanShell = ({
 
   const goToIntroScreen = React.useCallback(() => {
     setWalletReconnectEnabled(false);
+    setScan(null);
+    setError(null);
+    setPhase("idle");
+    lastAutoScannedWallet.current = null;
     if (initialWalletAddress) {
       router.push("/?connect=1");
       return;
     }
-    setError(null);
     setForceConnectChoice(true);
     setBootStage("connect");
     router.push("/?connect=1");
-  }, [initialWalletAddress, router, setError]);
+  }, [initialWalletAddress, router, setError, setPhase, setScan]);
 
   const openConnectChoice = React.useCallback(() => {
+    setScan(null);
+    setError(null);
+    setPhase("idle");
+    lastAutoScannedWallet.current = null;
     if (initialWalletAddress) {
-      window.location.assign("/");
+      window.location.assign("/?connect=1");
       return;
     }
     if (isConnected || address) {
@@ -971,11 +1164,9 @@ export const ScanShell = ({
       setBootStage("active");
       return;
     }
-    setError(null);
-    setPhase("idle");
     setForceConnectChoice(true);
     setBootStage("connect");
-  }, [address, initialWalletAddress, isConnected, setError, setPhase]);
+  }, [address, initialWalletAddress, isConnected, setError, setPhase, setScan]);
 
   const disconnectWallet = React.useCallback(() => {
     setScan(null);
@@ -995,7 +1186,11 @@ export const ScanShell = ({
   }, [address, disconnect, initialWalletAddress, setError, setPhase, setScan]);
 
   const loadingVisible =
-    bootStage === "active" && Boolean(activeWalletAddress) && !error && (phase === "scanning" || mutation.isPending || !scan);
+    bootStage === "active" &&
+    Boolean(activeWalletAddress) &&
+    !error &&
+    !visibleScan &&
+    (phase === "scanning" || mutation.isPending || refreshMutation.isPending);
 
   const connectInjectedWallet = () => {
     if (isConnected || address) {
@@ -1003,6 +1198,10 @@ export const ScanShell = ({
       setBootStage("active");
       return;
     }
+    setScan(null);
+    setError(null);
+    setPhase("idle");
+    lastAutoScannedWallet.current = null;
     setForceConnectChoice(false);
     const connector = connectors[0];
     if (!connector) {
@@ -1017,19 +1216,23 @@ export const ScanShell = ({
       setError("Enter a valid 0x wallet address.");
       return;
     }
+    setWalletReconnectEnabled(false);
+    setScan(null);
+    setError(null);
+    setPhase("idle");
+    lastAutoScannedWallet.current = null;
     window.location.assign(`/${addressDraft.trim()}`);
   };
 
-  const totalValue = scan?.portfolioOverview.totalUsd ?? 0;
-  const recommendations = scan?.recommendations ?? [];
+  const totalValue = visibleScan?.portfolioOverview.totalUsd ?? 0;
+  const recommendations = visibleScan?.recommendations ?? [];
   const sortedRecommendations = React.useMemo(
     () => [...recommendations].sort((left, right) => right.suggestedUsd - left.suggestedUsd),
     [recommendations],
   );
-  const tokenExposures = scan?.portfolioOverview.tokenExposures ?? [];
-  const protocolExposures = scan?.portfolioOverview.protocolExposures ?? [];
-  const analyzedUsd = scan?.portfolioOverview.analyzedUsd ?? 0;
-  const analyzedPct = totalValue > 0 ? Math.min((analyzedUsd / totalValue) * 100, 100) : 0;
+  const tokenExposures = visibleScan?.portfolioOverview.tokenExposures ?? [];
+  const protocolExposures = visibleScan?.portfolioOverview.protocolExposures ?? [];
+  const analyzedUsd = visibleScan?.portfolioOverview.analyzedUsd ?? 0;
 
   React.useEffect(() => {
     const element = recommendationsScrollerRef.current;
@@ -1049,7 +1252,7 @@ export const ScanShell = ({
       element.removeEventListener("scroll", updateScrollState);
       window.removeEventListener("resize", updateScrollState);
     };
-  }, [recommendations.length, scan]);
+  }, [recommendations.length, visibleScan]);
 
   return (
     <>
@@ -1081,7 +1284,17 @@ export const ScanShell = ({
 
               <div className="flex flex-wrap items-center gap-3">
                 <div className="rounded-full bg-white/8 px-5 py-3 text-sm font-semibold text-white/78">
-                  {activeWalletLabel}: {activeWalletAddress ? shortenAddress(activeWalletAddress) : "Not set"}
+                  {isConnectedWalletView ? (
+                    <span className="inline-flex items-center gap-3">
+                      <span className="h-2.5 w-2.5 rounded-full bg-lime shadow-[0_0_12px_rgba(215,255,31,0.45)]" />
+                      <span>{shortenAddress(activeWalletAddress)}</span>
+                    </span>
+                  ) : (
+                    <span>
+                      {initialWalletAddress ? "Guest address" : "Wallet"}:{" "}
+                      {activeWalletAddress ? shortenAddress(activeWalletAddress) : "Not set"}
+                    </span>
+                  )}
                 </div>
                 {address && !initialWalletAddress ? (
                   <Button
@@ -1098,19 +1311,27 @@ export const ScanShell = ({
               </div>
             </div>
 
-            <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.18fr)_minmax(420px,0.82fr)]">
-              <div className="rounded-[42px] bg-lime px-8 py-8 text-black shadow-panel lg:px-10 lg:py-10">
-                <div className="flex min-h-full flex-col">
+            <div className="mt-8 grid gap-5 xl:grid-cols-[minmax(0,1.18fr)_minmax(420px,0.82fr)]">
+              <div className="rounded-[42px] bg-lime px-8 py-7 text-black shadow-panel lg:px-9 lg:py-8">
+                <div className="flex min-h-full flex-col items-center justify-between text-center">
                   <h1 className="yo-display max-w-5xl text-[4.3rem] leading-[0.9] md:text-[6rem]">
                     YO GOT YO RISK OPTIMIZED, PERIOD.
                   </h1>
-                  <div className="mt-auto space-y-3 pt-8">
-                    <div className="flex flex-wrap gap-3">
+                  <div className="mt-6">
+                    <div className="flex flex-wrap items-center justify-center gap-3 xl:flex-nowrap">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="border border-black/10 bg-black text-white hover:bg-black/85 xl:whitespace-nowrap"
+                        onClick={openMethodologyPage}
+                      >
+                        Methodology
+                      </Button>
                       <a
                         href="https://exponential.fi/"
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center rounded-full border border-black/12 bg-white/55 px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-black/72 shadow-[0_4px_16px_rgba(0,0,0,0.05)] transition hover:bg-white/68"
+                        className="inline-flex items-center rounded-full border border-black/12 bg-white/55 px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-black/72 shadow-[0_4px_16px_rgba(0,0,0,0.05)] transition hover:bg-white/68 xl:whitespace-nowrap"
                       >
                         Powered by Exponential
                       </a>
@@ -1118,37 +1339,10 @@ export const ScanShell = ({
                         href="https://debank.com/"
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center rounded-full border border-black/12 bg-white/55 px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-black/72 shadow-[0_4px_16px_rgba(0,0,0,0.05)] transition hover:bg-white/68"
+                        className="inline-flex items-center rounded-full border border-black/12 bg-white/55 px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-black/72 shadow-[0_4px_16px_rgba(0,0,0,0.05)] transition hover:bg-white/68 xl:whitespace-nowrap"
                       >
                         Portfolio via DeBank
                       </a>
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="border border-black/10 bg-black text-white hover:bg-black/85"
-                        onClick={openMethodologyPage}
-                      >
-                        Methodology
-                      </Button>
-                      {scan && activeWalletAddress ? (
-                        <Button
-                          variant="secondary"
-                          className="border border-black/10 bg-black text-white hover:bg-black/85"
-                          disabled={refreshMutation.isPending}
-                          onClick={() => refreshMutation.mutate(activeWalletAddress)}
-                        >
-                          {refreshMutation.isPending ? (
-                            <span className="inline-flex items-center gap-2">
-                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                              Refreshing...
-                            </span>
-                          ) : (
-                            "Refresh analysis"
-                          )}
-                        </Button>
-                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -1171,25 +1365,26 @@ export const ScanShell = ({
                 </Card>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Card className="flex h-full flex-col space-y-3">
-                    <div className="min-h-[2.9rem] text-xs uppercase leading-[1.45] tracking-[0.22em] text-white/42">
+                  <Card className="flex h-full flex-col gap-3">
+                    <div className="min-h-[1.9rem] text-xs uppercase leading-[1.45] tracking-[0.22em] text-white/42">
                       Analyzed value
                     </div>
-                    <div className="min-h-[8.5rem] font-display text-5xl leading-none text-lime">
-                      {formatUsd(analyzedUsd)}{" "}
-                      <span className="text-[2.2rem] text-white/72">({formatPct(analyzedPct)})</span>
+                    <div className="min-h-[5.6rem] font-display text-[clamp(3.4rem,4.7vw,4.9rem)] leading-[0.92] text-lime">
+                      {formatAnalyzedValue(analyzedUsd)}
                     </div>
-                    <p className="text-base leading-7 text-white/62">
+                    <p className="mt-1 text-base leading-7 text-white/62">
                       The share of your portfolio the engine could confidently analyze and use for recommendations.
                     </p>
                   </Card>
 
-                  <Card className="flex h-full flex-col space-y-3">
-                    <div className="min-h-[2.9rem] text-xs uppercase leading-[1.45] tracking-[0.22em] text-white/42">
-                      Why YO? Let the numbers speak.
+                  <Card className="flex h-full flex-col gap-3">
+                    <div className="min-h-[1.9rem] text-xs uppercase leading-[1.45] tracking-[0.22em] text-white/42">
+                      Recommendations
                     </div>
-                    <div className="min-h-[8.5rem] font-display text-5xl leading-none text-lime">{recommendations.length}</div>
-                    <p className="text-base leading-7 text-white/62">
+                    <div className="flex min-h-[5.6rem] items-start justify-center font-display text-[clamp(3.4rem,4.7vw,4.9rem)] leading-[0.92] text-lime">
+                      {recommendations.length}
+                    </div>
+                    <p className="mt-1 text-base leading-7 text-white/62">
                       Explore personalized recommendations based on your onchain data and an industry-leading risk
                       framework.
                     </p>
@@ -1227,12 +1422,12 @@ export const ScanShell = ({
 
           {error ? <Card className="border-lime/30 text-lg text-white">{error}</Card> : null}
 
-          {scan ? (
+          {visibleScan ? (
             <>
               <section className="space-y-5">
                 <SectionTitle title="BUCKET OVERVIEW" />
                 <div className="grid items-start gap-4 xl:grid-cols-4">
-                  {scan.bucketOverview.map((bucket) => (
+                  {visibleScan.bucketOverview.map((bucket) => (
                     <BucketOverviewCard
                       key={bucket.bucket}
                       bucket={bucket}
@@ -1249,12 +1444,14 @@ export const ScanShell = ({
                   <h2 className="yo-display text-[2.5rem] leading-none text-white md:text-[3.5rem]">
                     WHY YO? LET THE NUMBERS SPEAK.
                   </h2>
+                </div>
+                <div className="relative">
                   {recommendations.length > 1 ? (
-                    <div className="ml-1 flex items-center gap-2">
+                    <>
                       <Button
                         className={cn(
-                          "h-14 w-14 px-0 text-2xl shadow-[0_0_28px_rgba(215,255,31,0.18)]",
-                          !canScrollRecommendationsPrev && "border-white/10 bg-[#151515] text-white/20 shadow-none hover:bg-[#151515]",
+                          "absolute left-3 top-[58%] z-20 h-11 w-11 -translate-y-1/2 border-lime/18 bg-lime/20 px-0 text-lg text-lime shadow-[0_0_20px_rgba(215,255,31,0.12)] backdrop-blur-sm hover:bg-lime/28",
+                          !canScrollRecommendationsPrev && "border-white/8 bg-white/8 text-white/20 shadow-none hover:bg-white/8",
                         )}
                         disabled={!canScrollRecommendationsPrev}
                         onClick={() =>
@@ -1268,8 +1465,8 @@ export const ScanShell = ({
                       </Button>
                       <Button
                         className={cn(
-                          "h-14 w-14 px-0 text-2xl shadow-[0_0_28px_rgba(215,255,31,0.18)]",
-                          !canScrollRecommendationsNext && "border-white/10 bg-[#151515] text-white/20 shadow-none hover:bg-[#151515]",
+                          "absolute right-3 top-[58%] z-20 h-11 w-11 -translate-y-1/2 border-lime/18 bg-lime/20 px-0 text-lg text-lime shadow-[0_0_20px_rgba(215,255,31,0.12)] backdrop-blur-sm hover:bg-lime/28",
+                          !canScrollRecommendationsNext && "border-white/8 bg-white/8 text-white/20 shadow-none hover:bg-white/8",
                         )}
                         disabled={!canScrollRecommendationsNext}
                         onClick={() =>
@@ -1281,23 +1478,23 @@ export const ScanShell = ({
                       >
                         →
                       </Button>
-                    </div>
+                    </>
                   ) : null}
+                  <SectionErrorBoundary title="Recommendations">
+                    <div ref={recommendationsScrollerRef} className="scrollbar-thin flex snap-x snap-mandatory gap-6 overflow-x-auto pb-3">
+                      {sortedRecommendations.map((recommendation) => (
+                        <RecommendationCard
+                          key={`${recommendation.bucket}:${recommendation.vaultAddress}`}
+                          recommendation={recommendation}
+                          walletAddress={address ?? ""}
+                          onConnectRequest={openConnectChoice}
+                          tokenExposures={tokenExposures}
+                          protocolExposures={protocolExposures}
+                        />
+                      ))}
+                    </div>
+                  </SectionErrorBoundary>
                 </div>
-                <SectionErrorBoundary title="Recommendations">
-                  <div ref={recommendationsScrollerRef} className="scrollbar-thin flex snap-x snap-mandatory gap-6 overflow-x-auto pb-3">
-                    {sortedRecommendations.map((recommendation) => (
-                      <RecommendationCard
-                        key={`${recommendation.bucket}:${recommendation.vaultAddress}`}
-                        recommendation={recommendation}
-                        walletAddress={address ?? ""}
-                        onConnectRequest={openConnectChoice}
-                        tokenExposures={tokenExposures}
-                        protocolExposures={protocolExposures}
-                      />
-                    ))}
-                  </div>
-                </SectionErrorBoundary>
               </section>
             </>
           ) : (
