@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useChainId, useSwitchChain } from "wagmi";
 
 import type { RankedRecommendation } from "@whyyo/shared";
 
@@ -36,6 +37,13 @@ type WithdrawalPlanItem = {
 
 // Official YO gateway address from the SDK constants.
 const YO_GATEWAY_ADDRESS = "0xF1EeE0957267b1A474323Ff9CfF7719E964969FA";
+const CHAIN_LABELS: Record<number, string> = {
+  1: "Ethereum",
+  8453: "Base",
+  42161: "Arbitrum",
+  10: "Optimism",
+  137: "Polygon",
+};
 
 const formatAmount = (value: number | null, digits = 5) =>
   value === null ? "n/a" : new Intl.NumberFormat("en-US", { maximumFractionDigits: digits }).format(value);
@@ -127,9 +135,13 @@ const IdleExecutionActions = ({
     refetch?: () => Promise<unknown>;
   };
   const parsedAmount = React.useMemo(() => toTokenUnits(amount, idleSourcePlan.decimals), [amount, idleSourcePlan.decimals]);
+  const walletChainId = useChainId();
+  const { switchChainAsync } = useSwitchChain();
   const canTransact = Boolean(walletAddress) && parsedAmount !== null && parsedAmount > 0n && Boolean(idleSourcePlan.tokenAddress);
   const currentAllowance = allowance.allowance ?? 0n;
   const needsApproval = parsedAmount !== null && parsedAmount > 0n ? currentAllowance < parsedAmount : true;
+  const expectedChainId = idleSourcePlan.chainId;
+  const isWrongNetwork = expectedChainId !== null && walletChainId !== expectedChainId;
 
   const handleDeposit = async () => {
     if (!walletAddress) {
@@ -142,6 +154,14 @@ const IdleExecutionActions = ({
     }
 
     try {
+      if (isWrongNetwork && expectedChainId !== null) {
+        const targetChainLabel = CHAIN_LABELS[expectedChainId] ?? `chain ${expectedChainId}`;
+        setStatus(`Switching wallet to ${targetChainLabel}...`);
+        await switchChainAsync({ chainId: expectedChainId });
+        setStatus(`Wallet switched to ${targetChainLabel}. Click ${needsApproval ? "Approve" : "Deposit"} again.`);
+        return;
+      }
+
       if (needsApproval) {
         if (!approve.approve) {
           setStatus("YO approve hook is unavailable in the current SDK build.");
@@ -219,8 +239,11 @@ const IdleExecutionActions = ({
   ]);
 
   const isBusy = Boolean(approve.isLoading || deposit.isLoading);
+  const targetChainLabel = expectedChainId !== null ? (CHAIN_LABELS[expectedChainId] ?? `chain ${expectedChainId}`) : null;
   const ctaLabel =
-    approve.isLoading
+    isWrongNetwork && targetChainLabel
+      ? `Switch to ${targetChainLabel}`
+      : approve.isLoading
       ? approve.hash
         ? "Approving..."
         : "Confirm approve..."
