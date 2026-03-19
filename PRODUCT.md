@@ -124,6 +124,35 @@ And it penalizes:
 - weak improvement
 - very small move sizes
 
+### Impact / Trust framework
+
+We use two simple lenses:
+
+- **Impact** = how much YO improves the portfolio
+- **Trust** = how reliable the data is
+
+The rule is simple:
+**only <span style="color: #16a34a;">High</span> Impact + <span style="color: #16a34a;">High</span> Trust gives a <span style="color: #16a34a;">High</span> recommendation.**
+
+| Impact | Trust | Final output |
+| --- | --- | --- |
+| <span style="color: #16a34a;">High</span> | <span style="color: #16a34a;">High</span> | <span style="color: #16a34a;"><strong>High recommendation</strong></span> |
+| <span style="color: #16a34a;">High</span> | <span style="color: #dc2626;">Low</span> | <span style="color: #ca8a04;">Medium</span> or cautious recommendation |
+| <span style="color: #dc2626;">Low</span> | <span style="color: #16a34a;">High</span> | <span style="color: #ca8a04;">Medium</span> or weak recommendation |
+| <span style="color: #dc2626;">Low</span> | <span style="color: #dc2626;">Low</span> | <span style="color: #dc2626;">Low</span> or informational only |
+
+In the product:
+
+- **Impact** drives the improvement score
+- **Trust** drives confidence and caveats
+- **Final output** becomes the recommendation strength and CTA
+
+Trust mainly depends on:
+
+- risk coverage
+- protocol matching quality
+- strength of the measured signal
+
 ---
 
 ## 5. YO SDK
@@ -195,4 +224,3 @@ This can help us:
 
 This creates a full loop:
 **analyze -> explain -> recommend -> migrate -> deposit**
-
