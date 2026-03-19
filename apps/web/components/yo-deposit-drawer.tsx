@@ -5,6 +5,7 @@ import * as React from "react";
 import type { RankedRecommendation } from "@whyyo/shared";
 
 import { getVaultAccent, getVaultLogoUrl } from "../lib/brand-assets";
+import { getRecommendationConfidence } from "../lib/recommendation-confidence";
 import { useYoAllowance, useYoApprove, useYoDeposit } from "../lib/yo-sdk";
 import { cn, formatPct, formatUsd } from "../lib/utils";
 import { AssetIcon } from "./asset-icon";
@@ -43,12 +44,6 @@ const isEvmAddress = (value: string) => /^0x[a-fA-F0-9]{40}$/.test(value);
 
 const formatDelta = (before: number | null | undefined, after: number | null | undefined, digits = 2) =>
   before == null || after == null ? null : `${before.toFixed(digits)} → ${after.toFixed(digits)}`;
-
-const getExecutionStateLabel = (recommendation: RankedRecommendation) => {
-  if (recommendation.actionability === "suppressed" || recommendation.score < 0.25) return "Low";
-  if (recommendation.strength === "strong" || recommendation.score >= 0.6) return "Major";
-  return "Minor";
-};
 
 const MetricHighlight = ({ children }: { children: React.ReactNode }) => <span className="font-semibold text-lime">{children}</span>;
 const MetricHighlightLink = ({
@@ -294,7 +289,7 @@ export const DepositDrawer = ({
   const hhiDelta = formatDelta(recommendation.metrics.protocolHHIBefore, recommendation.metrics.protocolHHIAfter, 3);
   const wrsDelta = formatDelta(recommendation.metrics.weightedRiskBefore, recommendation.metrics.weightedRiskAfter, 2);
   const savingsDelta = formatDelta(recommendation.metrics.savingsScoreBefore, recommendation.metrics.savingsScoreAfter, 1);
-  const executionStateLabel = getExecutionStateLabel(recommendation);
+  const confidence = getRecommendationConfidence(recommendation);
   const explanationBullets = recommendation.llmExplanation?.bullets?.slice(0, 3) ?? [];
   const hasLlmExplanation = Boolean(recommendation.llmExplanation?.summary || explanationBullets.length);
   const hhiReductionPct =
@@ -364,19 +359,19 @@ export const DepositDrawer = ({
                   </div>
                   <div className="rounded-[22px] border border-white/10 bg-black/35 p-4">
                     <div className="text-xs uppercase tracking-[0.18em] text-white/38">
-                      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.recommendationState}>Recommendation state</MethodologyLink>
+                      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.confidence}>Confidence</MethodologyLink>
                     </div>
                     <div
                       className={cn(
                         "mt-3 text-3xl font-semibold",
-                        executionStateLabel === "Major"
+                        confidence.label === "HIGH"
                           ? "text-lime"
-                          : executionStateLabel === "Minor"
+                          : confidence.label === "MEDIUM"
                             ? "text-[#ffd84d]"
                             : "text-[#ff6b6b]",
                       )}
                     >
-                      {executionStateLabel}
+                      {confidence.label}
                     </div>
                   </div>
                 </div>

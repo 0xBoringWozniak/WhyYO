@@ -14,6 +14,7 @@ export const METHODOLOGY_SECTION_IDS = {
   weightedRisk: "weighted-risk",
   highRiskExposure: "high-risk-exposure",
   savingsScore: "savings-score",
+  confidence: "confidence",
   trustIndex: "trust-index",
   coverage: "coverage",
   yoShare: "yo-share",

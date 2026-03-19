@@ -10,6 +10,14 @@ import type { BucketMetrics, CanonicalProtocolExposure, CanonicalTokenExposure, 
 import { refreshScan, startScan } from "../lib/api";
 import { getVaultAccent, getVaultLogoUrl, yoBrandMarkUrl } from "../lib/brand-assets";
 import { reportClientError } from "../lib/client-error-reporting";
+import {
+  getCoverageTrustStatus,
+  getOverlapTrustStatus,
+  getRecommendationConfidence,
+  getVaultHighRiskTrustStatus,
+  getYoShareTrustStatus,
+  trustMetricToneClass,
+} from "../lib/recommendation-confidence";
 import { cn, formatPct, formatUsd } from "../lib/utils";
 import { setWalletReconnectEnabled } from "../lib/wagmi";
 import { useScanStore } from "../store/use-scan-store";
@@ -71,132 +79,6 @@ const formatBucketUsd = (value: number) => {
   const compact = value / 1_000_000_000;
   const digits = compact >= 100 ? 0 : compact >= 10 ? 1 : 2;
   return `$${compact.toFixed(digits)}B`;
-};
-
-type TrustMetricStatus = "green" | "yellow" | "orange" | "red" | "neutral";
-
-const trustMetricToneClass = (status: TrustMetricStatus) => {
-  switch (status) {
-    case "green":
-      return "text-lime";
-    case "yellow":
-      return "text-[#ffd84d]";
-    case "orange":
-      return "text-[#ff9f43]";
-    case "red":
-      return "text-[#ff6b6b]";
-    default:
-      return "text-white";
-  }
-};
-
-const trustMetricWeight = (status: TrustMetricStatus) => {
-  switch (status) {
-    case "green":
-      return 3;
-    case "yellow":
-      return 2;
-    case "orange":
-      return 1;
-    case "red":
-      return 0;
-    default:
-      return 1.5;
-  }
-};
-
-const getHigherBetterTone = ({
-  value,
-  warnMin,
-  goodMin,
-}: {
-  value: number | null;
-  warnMin: number;
-  goodMin: number;
-}) => {
-  if (value === null) return "text-white";
-  return trustMetricToneClass(value > goodMin ? "green" : value >= warnMin ? "yellow" : "red");
-};
-
-const getLowerBetterTone = ({
-  value,
-  greenMax,
-  yellowMax,
-  orangeMax,
-}: {
-  value: number | null;
-  greenMax: number;
-  yellowMax: number;
-  orangeMax: number;
-}) => {
-  if (value === null) return "text-white";
-  return trustMetricToneClass(value <= greenMax ? "green" : value <= yellowMax ? "yellow" : value <= orangeMax ? "orange" : "red");
-};
-
-const coverageTrustStatus = (value: number | null): TrustMetricStatus => {
-  if (value === null) return "neutral";
-  if (value > 60) return "green";
-  if (value >= 30) return "yellow";
-  return "red";
-};
-
-const lowerBetterTrustStatus = ({
-  value,
-  greenMax,
-  yellowMax,
-  orangeMax,
-}: {
-  value: number | null;
-  greenMax: number;
-  yellowMax: number;
-  orangeMax: number;
-}): TrustMetricStatus => {
-  if (value === null) return "neutral";
-  if (value <= greenMax) return "green";
-  if (value <= yellowMax) return "yellow";
-  if (value <= orangeMax) return "orange";
-  return "red";
-};
-
-const getTrustIndex = ({
-  coveragePct,
-  vaultHighRiskExposurePct,
-  existingYoSharePct,
-  protocolOverlapPct,
-}: {
-  coveragePct: number | null;
-  vaultHighRiskExposurePct: number | null;
-  existingYoSharePct: number;
-  protocolOverlapPct: number;
-}) => {
-  const statuses: TrustMetricStatus[] = [
-    coverageTrustStatus(coveragePct),
-    lowerBetterTrustStatus({ value: vaultHighRiskExposurePct, greenMax: 20, yellowMax: 30, orangeMax: 40 }),
-    lowerBetterTrustStatus({ value: existingYoSharePct * 100, greenMax: 10, yellowMax: 20, orangeMax: 30 }),
-    lowerBetterTrustStatus({ value: protocolOverlapPct, greenMax: 10, yellowMax: 30, orangeMax: 50 }),
-  ];
-
-  const averageScore = statuses.reduce((sum, status) => sum + trustMetricWeight(status), 0) / statuses.length;
-  const redCount = statuses.filter((status) => status === "red").length;
-
-  if (averageScore >= 2.5 && redCount === 0) {
-    return {
-      label: "Major",
-      className: "border-lime/40 bg-lime/10 text-lime",
-    };
-  }
-
-  if (averageScore >= 1.5 && redCount <= 1) {
-    return {
-      label: "Minor",
-      className: "border-[#ffd84d]/40 bg-[#ffd84d]/10 text-[#ffd84d]",
-    };
-  }
-
-  return {
-    label: "Low",
-    className: "border-[#ff6b6b]/40 bg-[#ff6b6b]/10 text-[#ff6b6b]",
-  };
 };
 
 type BootStage = "intro" | "booting" | "connect" | "active";
@@ -782,35 +664,11 @@ const RecommendationCard = ({
     protocolExposures,
     idleSourcePlan,
   });
-  const trustIndex = getTrustIndex({
-    coveragePct: recommendation.metrics.coveragePct,
-    vaultHighRiskExposurePct: recommendation.metrics.vaultHighRiskExposurePct,
-    existingYoSharePct: recommendation.metrics.existingYoSharePct,
-    protocolOverlapPct: recommendation.metrics.protocolOverlapPct,
-  });
-  const coverageTone = getHigherBetterTone({
-    value: recommendation.metrics.coveragePct,
-    warnMin: 30,
-    goodMin: 60,
-  });
-  const vaultHighRiskTone = getLowerBetterTone({
-    value: recommendation.metrics.vaultHighRiskExposurePct,
-    greenMax: 20,
-    yellowMax: 30,
-    orangeMax: 40,
-  });
-  const existingYoShareTone = getLowerBetterTone({
-    value: recommendation.metrics.existingYoSharePct * 100,
-    greenMax: 10,
-    yellowMax: 20,
-    orangeMax: 30,
-  });
-  const overlapTone = getLowerBetterTone({
-    value: recommendation.metrics.protocolOverlapPct,
-    greenMax: 10,
-    yellowMax: 30,
-    orangeMax: 50,
-  });
+  const confidence = getRecommendationConfidence(recommendation);
+  const coverageTone = trustMetricToneClass(getCoverageTrustStatus(recommendation.metrics.coveragePct));
+  const vaultHighRiskTone = trustMetricToneClass(getVaultHighRiskTrustStatus(recommendation.metrics.vaultHighRiskExposurePct));
+  const existingYoShareTone = trustMetricToneClass(getYoShareTrustStatus(recommendation.metrics.existingYoSharePct * 100));
+  const overlapTone = trustMetricToneClass(getOverlapTrustStatus(recommendation.metrics.protocolOverlapPct));
   const displayBeforePositions =
     recommendation.visualization.currentComposition.protocols.length === 0 && recommendation.metrics.idleAssetUsd > 0
       ? 1
@@ -906,9 +764,9 @@ const RecommendationCard = ({
               <div className="mt-3 flex items-start justify-between gap-4">
                 <div className="font-display text-[3rem] leading-none text-lime">{formatUsd(recommendation.suggestedUsd)}</div>
                 <div className="pt-1">
-                  <span className={cn("inline-flex min-w-[108px] items-center justify-center rounded-full border px-4 py-2 text-[0.8rem] font-semibold uppercase tracking-[0.16em]", trustIndex.className)}>
-                    <MethodologyLink className="no-underline" sectionId={METHODOLOGY_SECTION_IDS.trustIndex}>
-                      {trustIndex.label}
+                  <span className={cn("inline-flex min-w-[108px] items-center justify-center rounded-full border px-4 py-2 text-[0.8rem] font-semibold uppercase tracking-[0.16em]", confidence.className)}>
+                    <MethodologyLink className="no-underline" sectionId={METHODOLOGY_SECTION_IDS.confidence}>
+                      {confidence.label}
                     </MethodologyLink>
                   </span>
                 </div>
