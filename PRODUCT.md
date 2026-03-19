@@ -1,4 +1,4 @@
-# Why YO
+# WHAT'S THE PRODUCT ABOUT
 
 ## WHY YO?
 
