@@ -168,9 +168,9 @@ The user can act on it immediately.
   <img src="https://cdn.simpleicons.org/docker/2496ED" alt="Docker" height="28" />
 </p>
 
-- **Frontend:** Next.js, React, TypeScript
-- **Backend:** Fastify, Node.js
-- **Data layer:** PostgreSQL, Redis
+- **Frontend:** Next.js, React, TypeScript, YO SDK
+- **Backend:** Fastify, Node.js, YO SDK, OpenAI API
+- **Data layer:** PostgreSQL, Redis, DeBank API
 - **Infra:** Docker
 
 ---
