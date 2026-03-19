@@ -49,8 +49,6 @@ const formatDiversification = (value: number | null) => (value === null ? "n/a" 
 const shortenAddress = (value?: string) => (value ? `${value.slice(0, 6)}...${value.slice(-4)}` : "Not connected");
 const formatReadableValue = (value: number | null, formatter: (value: number) => string, fallback: string) =>
   value === null ? fallback : formatter(value);
-const formatMetricNumber = (value: number | null | undefined, digits = 2) =>
-  value === null || value === undefined ? "n/a" : value.toFixed(digits);
 const getDisplayPositionCount = ({
   positionCount,
   defiPositionCount,
@@ -261,123 +259,6 @@ const inferTokenDecimals = (symbol: string, bucket: string) => {
 };
 
 const isValidWalletAddress = (value: string) => /^0x[a-fA-F0-9]{40}$/.test(value.trim());
-
-const toImprovementLabel = (recommendation: RankedRecommendation) => {
-  if (recommendation.actionability === "suppressed" || recommendation.recommendationType === "no_incremental_improvement") {
-    return "No clear portfolio improvement";
-  }
-  if (recommendation.strength === "strong" || recommendation.score >= 0.6) {
-    return "Major portfolio improvement available";
-  }
-  return "Minor portfolio improvement available";
-};
-
-const LINKABLE_METRIC_PHRASES: Array<{ phrase: string; sectionId: string }> = [
-  { phrase: "High-risk exposure", sectionId: METHODOLOGY_SECTION_IDS.highRiskExposure },
-  { phrase: "Weighted risk", sectionId: METHODOLOGY_SECTION_IDS.weightedRisk },
-  { phrase: "Savings score", sectionId: METHODOLOGY_SECTION_IDS.savingsScore },
-  { phrase: "Diversification", sectionId: METHODOLOGY_SECTION_IDS.diversification },
-  { phrase: "Risk coverage", sectionId: METHODOLOGY_SECTION_IDS.riskCoverage },
-  { phrase: "Trust index", sectionId: METHODOLOGY_SECTION_IDS.trustIndex },
-  { phrase: "Recommendation state", sectionId: METHODOLOGY_SECTION_IDS.recommendationState },
-  { phrase: "Protocol overlap", sectionId: METHODOLOGY_SECTION_IDS.overlap },
-  { phrase: "Overlap", sectionId: METHODOLOGY_SECTION_IDS.overlap },
-  { phrase: "Existing YO share", sectionId: METHODOLOGY_SECTION_IDS.yoShare },
-  { phrase: "YO share", sectionId: METHODOLOGY_SECTION_IDS.yoShare },
-  { phrase: "Vault high-risk", sectionId: METHODOLOGY_SECTION_IDS.vaultHighRisk },
-  { phrase: "Coverage", sectionId: METHODOLOGY_SECTION_IDS.coverage },
-].sort((left, right) => right.phrase.length - left.phrase.length);
-
-const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const renderLinkedMetricText = (text: string) => {
-  if (!text) return text;
-
-  const nodes: React.ReactNode[] = [];
-  const pattern = new RegExp(
-    `(${LINKABLE_METRIC_PHRASES.map(({ phrase }) => escapeRegExp(phrase)).join("|")})`,
-    "gi",
-  );
-
-  let lastIndex = 0;
-  let matchIndex = 0;
-
-  for (const match of text.matchAll(pattern)) {
-    const found = match[0];
-    const start = match.index ?? 0;
-
-    if (start > lastIndex) {
-      nodes.push(<React.Fragment key={`text-${matchIndex}`}>{text.slice(lastIndex, start)}</React.Fragment>);
-    }
-
-    const metric = LINKABLE_METRIC_PHRASES.find(({ phrase }) => phrase.toLowerCase() === found.toLowerCase());
-    if (!metric) {
-      nodes.push(<React.Fragment key={`match-${matchIndex}`}>{found}</React.Fragment>);
-      lastIndex = start + found.length;
-      matchIndex += 1;
-      continue;
-    }
-
-    nodes.push(
-      <MethodologyLink key={`match-${matchIndex}`} sectionId={metric.sectionId}>
-        {found}
-      </MethodologyLink>,
-    );
-
-    lastIndex = start + found.length;
-    matchIndex += 1;
-  }
-
-  if (lastIndex < text.length) {
-    nodes.push(<React.Fragment key={`text-tail`}>{text.slice(lastIndex)}</React.Fragment>);
-  }
-
-  return nodes;
-};
-
-const getRecommendationSummary = (recommendation: RankedRecommendation) => (
-  recommendation.llmExplanation?.summary ? (
-    <>{renderLinkedMetricText(recommendation.llmExplanation.summary)}</>
-  ) : (
-    <>
-      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.weightedRisk}>Weighted risk</MethodologyLink>{" "}
-      {formatMetricNumber(recommendation.metrics.weightedRiskBefore)} {"->"}{" "}
-      {formatMetricNumber(recommendation.metrics.weightedRiskAfter)},{" "}
-      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.savingsScore}>Savings score</MethodologyLink>{" "}
-      {formatMetricNumber(recommendation.metrics.savingsScoreBefore)} {"->"}{" "}
-      {formatMetricNumber(recommendation.metrics.savingsScoreAfter)},{" "}
-      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.diversification}>Diversification</MethodologyLink>{" "}
-      {formatReadableValue(
-        recommendation.visualization.beforeAfterBars.find((bar) => bar.key === "diversification_score")?.after ?? null,
-        (value) => formatPct(value),
-        "n/a",
-      )}
-      .
-    </>
-  )
-);
-
-const getRecommendationBullets = (recommendation: RankedRecommendation) => {
-  if (recommendation.llmExplanation?.bullets?.length) {
-    return recommendation.llmExplanation.bullets.map((bullet, index) => (
-      <React.Fragment key={`llm-bullet-${index}`}>{renderLinkedMetricText(bullet)}</React.Fragment>
-    ));
-  }
-
-  return [
-    <>
-      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.highRiskExposure}>High-risk exposure</MethodologyLink>{" "}
-      {formatReadableValue(recommendation.metrics.highRiskBeforePct, (value) => formatPct(value * 100), "n/a")} {"->"}{" "}
-      {formatReadableValue(recommendation.metrics.highRiskAfterPct, (value) => formatPct(value * 100), "n/a")}.
-    </>,
-    <>
-      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.overlap}>Overlap</MethodologyLink>{" "}
-      {formatPct(recommendation.metrics.protocolOverlapPct)} and{" "}
-      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.yoShare}>YO share</MethodologyLink>{" "}
-      {formatPct(recommendation.metrics.existingYoSharePct * 100)}.
-    </>,
-  ];
-};
 
 const buildIdleSourcePlan = ({
   recommendation,
@@ -752,9 +633,23 @@ const BucketOverviewCard = ({
     { key: "productive", label: "Productive", valuePct: productivePct, tone: "good" as const },
     { key: "idle", label: "Idle", valuePct: idlePct, tone: "warn" as const },
   ];
+  const topTokens = tokens.slice(0, 3);
+  const remainingTokenUsd = tokens.slice(3).reduce((sum, token) => sum + token.usdValue, 0);
+  const tokenPreviewItems =
+    remainingTokenUsd > 0
+      ? [
+          ...topTokens,
+          {
+            key: `${bucket.bucket}-others`,
+            symbol: "Others",
+            usdValue: remainingTokenUsd,
+            logoUrl: null,
+          },
+        ]
+      : topTokens;
 
   return (
-    <Card className="relative flex h-[1260px] flex-col space-y-5 overflow-hidden">
+    <Card className="relative flex h-[82vh] min-h-[820px] max-h-[980px] flex-col space-y-4 overflow-hidden">
     <Badge
       tone={hasRecommendation ? "good" : "neutral"}
       className="absolute right-4 top-4 z-10 h-10 min-w-[86px] max-w-[86px] justify-center px-2 py-0 text-center text-[10px]"
@@ -776,7 +671,7 @@ const BucketOverviewCard = ({
       </div>
     </div>
 
-    <div className="grid gap-x-6 gap-y-4 text-base text-white/76 md:grid-cols-2">
+    <div className="grid gap-x-6 gap-y-3 text-base text-white/76 md:grid-cols-2">
       <div>
         <div className="text-white/62">Idle capital</div>
         <div className="mt-1 text-white">{formatUsd(bucket.idleAssetUsd)}</div>
@@ -802,17 +697,17 @@ const BucketOverviewCard = ({
     <StackedBar segments={coverageSegments} />
     <StackedBar segments={productiveVsIdleSegments} />
 
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="text-xs uppercase tracking-[0.2em] text-white/42">Top tokens</div>
-      <div className="space-y-3">
-        {tokens.length > 0 ? (
-          <div className="max-h-[324px] min-h-[324px] space-y-3 overflow-y-auto pr-1 [scrollbar-color:rgba(215,255,31,0.55)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/55 [&::-webkit-scrollbar-track]:bg-transparent">
-            {tokens.map((token) => (
-              <div key={token.key} className="flex min-w-0 items-center gap-3 rounded-full border border-white/10 bg-black/45 px-4 py-3">
-                <AssetIcon src={token.logoUrl} alt={token.symbol} label={token.symbol} className="h-10 w-10 shrink-0" />
+      <div className="space-y-2">
+        {tokenPreviewItems.length > 0 ? (
+          <div className="grid min-h-[154px] grid-cols-2 auto-rows-[72px] content-start gap-2">
+            {tokenPreviewItems.map((token) => (
+              <div key={token.key} className="flex h-[72px] min-w-0 items-center gap-2 rounded-[22px] border border-white/10 bg-black/45 px-3 py-2.5">
+                <AssetIcon src={token.logoUrl} alt={token.symbol} label={token.symbol} className="h-8 w-8 shrink-0" />
                 <div className="min-w-0">
-                  <div className="truncate text-lg font-semibold text-white">{token.symbol}</div>
-                  <div className="truncate text-sm text-white/48">{formatUsd(token.usdValue)}</div>
+                  <div className="truncate text-[0.95rem] font-semibold leading-tight text-white">{token.symbol}</div>
+                  <div className="truncate text-xs text-white/48">{formatUsd(token.usdValue)}</div>
                 </div>
               </div>
             ))}
@@ -823,28 +718,28 @@ const BucketOverviewCard = ({
       </div>
     </div>
 
-    <div className="min-h-0 flex flex-1 flex-col space-y-3">
+    <div className="min-h-0 flex flex-1 flex-col space-y-2">
       <div className="text-xs uppercase tracking-[0.2em] text-white/42">Protocol mix</div>
-      <div className="space-y-2">
+      <div className="min-h-0 space-y-2">
         {protocols.length > 0 ? (
-          <div className="max-h-[408px] min-h-[408px] space-y-3 overflow-y-auto pr-1 [scrollbar-color:rgba(215,255,31,0.55)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/55 [&::-webkit-scrollbar-track]:bg-transparent">
+          <div className="max-h-[430px] min-h-[430px] space-y-2.5 overflow-y-auto pr-1 [scrollbar-color:rgba(215,255,31,0.55)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-lime/55 [&::-webkit-scrollbar-track]:bg-transparent">
             {protocols.map((protocol) => (
               <div
                 key={`${protocol.chain}:${protocol.canonicalProtocolId}:${protocol.usdValue}`}
-                className="flex min-w-0 items-center justify-between rounded-[22px] border border-white/8 bg-black/45 px-4 py-4"
+                className="flex min-w-0 items-center justify-between rounded-[22px] border border-white/8 bg-black/45 px-4 py-3.5"
               >
                 <div className="flex min-w-0 items-center gap-3">
                   <AssetIcon
                     src={protocol.logoUrl ?? null}
                     alt={protocol.canonicalProtocolName}
                     label={protocol.canonicalProtocolName}
-                    className="h-11 w-11 shrink-0"
+                    className="h-9 w-9 shrink-0"
                   />
                   <div className="min-w-0">
-                    <div className="truncate text-lg font-semibold text-white">
+                    <div className="truncate text-[1.02rem] font-semibold leading-tight text-white">
                       {protocol.originalProtocolName ?? protocol.canonicalProtocolName}
                     </div>
-                    <div className="truncate text-xs uppercase tracking-[0.18em] text-white/42">
+                    <div className="truncate text-[11px] uppercase tracking-[0.17em] text-white/42">
                       {protocol.strategyType.replaceAll("_", " ")}
                     </div>
                   </div>
@@ -887,8 +782,6 @@ const RecommendationCard = ({
     protocolExposures,
     idleSourcePlan,
   });
-  const improvementLabel = toImprovementLabel(recommendation);
-  const displayedBullets = getRecommendationBullets(recommendation).slice(0, 2);
   const trustIndex = getTrustIndex({
     coveragePct: recommendation.metrics.coveragePct,
     vaultHighRiskExposurePct: recommendation.metrics.vaultHighRiskExposurePct,
@@ -922,6 +815,36 @@ const RecommendationCard = ({
     recommendation.visualization.currentComposition.protocols.length === 0 && recommendation.metrics.idleAssetUsd > 0
       ? 1
       : recommendation.visualization.simplification.beforePositions;
+  const trustMetricBadges = [
+    {
+      key: "coverage",
+      sectionId: METHODOLOGY_SECTION_IDS.coverage,
+      label: "Coverage",
+      value: formatReadableValue(recommendation.metrics.coveragePct, formatPct, "n/a"),
+      tone: coverageTone,
+    },
+    {
+      key: "vault-high-risk",
+      sectionId: METHODOLOGY_SECTION_IDS.vaultHighRisk,
+      label: "Vault high-risk",
+      value: formatReadableValue(recommendation.metrics.vaultHighRiskExposurePct, formatPct, "n/a"),
+      tone: vaultHighRiskTone,
+    },
+    {
+      key: "yo-share",
+      sectionId: METHODOLOGY_SECTION_IDS.yoShare,
+      label: "YO share",
+      value: formatPct(recommendation.metrics.existingYoSharePct * 100),
+      tone: existingYoShareTone,
+    },
+    {
+      key: "overlap",
+      sectionId: METHODOLOGY_SECTION_IDS.overlap,
+      label: "Overlap",
+      value: formatPct(recommendation.metrics.protocolOverlapPct),
+      tone: overlapTone,
+    },
+  ];
 
   return (
     <Card className="w-full min-w-full snap-start overflow-visible p-0">
@@ -937,11 +860,10 @@ const RecommendationCard = ({
             />
             <div>
               <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.22em] text-white/42">
-                <span className="text-lime">{improvementLabel}</span>
-                <span>{recommendation.primaryIntent.replaceAll("_", " ")}</span>
+                <span className="text-[#ffd84d]">{recommendation.primaryIntent.replaceAll("_", " ")}</span>
               </div>
               <h3 className="mt-2 text-[1.56rem] font-semibold leading-tight text-white">
-                {recommendation.llmExplanation?.headline ?? `${recommendation.bucket} -> ${recommendation.vaultSymbol}`}
+                {`${recommendation.bucket} Bucket`}
               </h3>
             </div>
           </div>
@@ -950,99 +872,63 @@ const RecommendationCard = ({
 
       <div className="space-y-3 px-4 py-4">
         <div className="grid gap-3 xl:grid-cols-[1.02fr_0.98fr]">
-          <div className="space-y-5 rounded-[26px] border border-white/8 bg-[#121212] p-4">
+          <div className="h-full rounded-[26px] border border-white/8 bg-[#121212] p-4">
             <div className="mb-4 text-xs uppercase tracking-[0.2em] text-white/42">
-              {recommendation.showBeforeAfterBars ? "Modeled comparison" : "Idle opportunity profile"}
+              {recommendation.showBeforeAfterBars ? "Modeled comparison" : "Idle profile"}
             </div>
-            {recommendation.showBeforeAfterBars ? <BeforeAfterBars metrics={recommendation.visualization.beforeAfterBars} /> : null}
-            <div className={cn("grid gap-3", recommendation.showIdleOpportunityVisual ? "md:grid-cols-2" : "md:grid-cols-1")}>
-              {recommendation.showIdleOpportunityVisual ? (
-                <div className="rounded-[22px] border border-white/8 bg-black/35 p-4">
-                  <div className="text-xs uppercase tracking-[0.2em] text-white/42">Idle profile</div>
-                  <div className="mt-4 space-y-4">
-                    <StackedBar segments={recommendation.visualization.idleVsInvestedBar} />
-                    <div className="grid gap-2 text-[0.96rem] text-white/74">
-                      <div>Idle capital {formatUsd(recommendation.metrics.idleAssetUsd)}</div>
-                      <div>Est. annual yield {formatUsd(recommendation.metrics.estimatedAnnualYieldOpportunityUsd ?? 0)}</div>
-                      <div>Vault APY {formatPct(recommendation.metrics.vaultApyPct)}</div>
-                      <div>
-                        <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.vaultHighRisk}>Vault high-risk</MethodologyLink>{" "}
-                        {recommendation.metrics.vaultHighRiskExposurePct === null ? "n/a" : formatPct(recommendation.metrics.vaultHighRiskExposurePct)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
+            {recommendation.showBeforeAfterBars ? (
+              <BeforeAfterBars metrics={recommendation.visualization.beforeAfterBars} />
+            ) : recommendation.showIdleOpportunityVisual ? (
               <div className="rounded-[22px] border border-white/8 bg-black/35 p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-white/42">Trust layer</div>
-                <div className="mt-4 space-y-3">
-                  <div className="flex items-center justify-between rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
-                    <div className="min-w-0 overflow-hidden text-[0.7rem] uppercase tracking-[0.14em] leading-tight text-white/42">
-                      <MethodologyLink className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap no-underline border-b border-current/80 pb-[0.14rem]" sectionId={METHODOLOGY_SECTION_IDS.trustIndex}>
-                        Trust index
-                      </MethodologyLink>
+                <div className="space-y-4">
+                  <StackedBar segments={recommendation.visualization.idleVsInvestedBar} />
+                  <div className="grid gap-2 text-[0.96rem] text-white/74">
+                    <div>
+                      Productive {formatPct(recommendation.metrics.productiveSharePct * 100)} · Idle{" "}
+                      {formatPct(recommendation.metrics.idleSharePct * 100)}
                     </div>
-                    <span className={cn("inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]", trustIndex.className)}>
-                      {trustIndex.label}
-                    </span>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="min-w-0 rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
-                      <div className="min-w-0 overflow-hidden text-[0.7rem] uppercase tracking-[0.14em] leading-tight text-white/42">
-                        <MethodologyLink className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap no-underline border-b border-current/80 pb-[0.14rem]" sectionId={METHODOLOGY_SECTION_IDS.coverage}>
-                          Coverage
-                        </MethodologyLink>
-                      </div>
-                      <div className={cn("mt-2 text-xl font-semibold", coverageTone)}>{formatReadableValue(recommendation.metrics.coveragePct, formatPct, "n/a")}</div>
-                    </div>
-                    <div className="min-w-0 rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
-                      <div className="min-w-0 overflow-hidden text-[0.65rem] uppercase tracking-[0.11em] leading-tight text-white/42">
-                        <MethodologyLink className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap no-underline border-b border-current/80 pb-[0.14rem]" sectionId={METHODOLOGY_SECTION_IDS.vaultHighRisk}>
-                          Vault high-risk
-                        </MethodologyLink>
-                      </div>
-                      <div className={cn("mt-2 text-xl font-semibold", vaultHighRiskTone)}>{formatReadableValue(recommendation.metrics.vaultHighRiskExposurePct, formatPct, "n/a")}</div>
-                    </div>
-                    <div className="min-w-0 rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
-                      <div className="min-w-0 overflow-hidden text-[0.7rem] uppercase tracking-[0.14em] leading-tight text-white/42">
-                        <MethodologyLink className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap no-underline border-b border-current/80 pb-[0.14rem]" sectionId={METHODOLOGY_SECTION_IDS.yoShare}>
-                          YO share
-                        </MethodologyLink>
-                      </div>
-                      <div className={cn("mt-2 text-xl font-semibold", existingYoShareTone)}>{formatPct(recommendation.metrics.existingYoSharePct * 100)}</div>
-                    </div>
-                    <div className="min-w-0 rounded-[18px] border border-white/8 bg-black/30 px-4 py-3">
-                      <div className="min-w-0 overflow-hidden text-[0.7rem] uppercase tracking-[0.14em] leading-tight text-white/42">
-                        <MethodologyLink className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap no-underline border-b border-current/80 pb-[0.14rem]" sectionId={METHODOLOGY_SECTION_IDS.overlap}>
-                          Overlap
-                        </MethodologyLink>
-                      </div>
-                      <div className={cn("mt-2 text-xl font-semibold", overlapTone)}>{formatPct(recommendation.metrics.protocolOverlapPct)}</div>
+                    <div>Idle capital {formatUsd(recommendation.metrics.idleAssetUsd)}</div>
+                    <div>Est. annual yield {formatUsd(recommendation.metrics.estimatedAnnualYieldOpportunityUsd ?? 0)}</div>
+                    <div>Vault APY {formatPct(recommendation.metrics.vaultApyPct)}</div>
+                    <div>
+                      <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.vaultHighRisk}>Vault high-risk</MethodologyLink>{" "}
+                      {recommendation.metrics.vaultHighRiskExposurePct === null ? "n/a" : formatPct(recommendation.metrics.vaultHighRiskExposurePct)}
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : null}
           </div>
 
           <div className="rounded-[26px] border border-white/8 bg-[#121212] p-4">
             <div className="flex h-full flex-col">
               <div className="text-xs uppercase tracking-[0.2em] text-white/42">Suggested amount</div>
-              <div className="mt-3 font-display text-[3rem] leading-none text-lime">{formatUsd(recommendation.suggestedUsd)}</div>
-              <div className="mt-3 text-[1rem] leading-7 text-white/78">{getRecommendationSummary(recommendation)}</div>
-              {displayedBullets.length ? (
-                <ul className="mt-2 space-y-2 text-[0.98rem] leading-7 text-white/72">
-                  {displayedBullets.map((bullet, index) => (
-                    <li key={index} className="flex gap-2">
-                      <span className="text-lime">•</span>
-                      <span>{bullet}</span>
-                    </li>
+              <div className="mt-3 flex items-start justify-between gap-4">
+                <div className="font-display text-[3rem] leading-none text-lime">{formatUsd(recommendation.suggestedUsd)}</div>
+                <div className="pt-1">
+                  <span className={cn("inline-flex min-w-[108px] items-center justify-center rounded-full border px-4 py-2 text-[0.8rem] font-semibold uppercase tracking-[0.16em]", trustIndex.className)}>
+                    <MethodologyLink className="no-underline" sectionId={METHODOLOGY_SECTION_IDS.trustIndex}>
+                      {trustIndex.label}
+                    </MethodologyLink>
+                  </span>
+                </div>
+              </div>
+              <div className="mt-6 space-y-3">
+                <div className="grid gap-3 md:grid-cols-4">
+                  {trustMetricBadges.map((metric) => (
+                    <div key={metric.key} className="min-w-0 rounded-[18px] border border-white/8 bg-black/30 px-4 py-4">
+                      <div className="min-w-0 overflow-hidden text-[0.68rem] uppercase tracking-[0.13em] leading-tight text-white/42">
+                        <MethodologyLink className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap no-underline border-b border-current/80 pb-[0.14rem]" sectionId={metric.sectionId}>
+                          {metric.label}
+                        </MethodologyLink>
+                      </div>
+                      <div className={cn("mt-3 text-[1.45rem] font-semibold leading-none", metric.tone)}>{metric.value}</div>
+                    </div>
                   ))}
-                </ul>
-              ) : null}
+                </div>
+              </div>
 
-              <div className="mt-auto space-y-4 border-t border-white/8 pt-4">
+              <div className="mt-auto space-y-4 pt-4">
                 <SimplificationVisual
                   beforePositions={displayBeforePositions}
                   afterPositions={recommendation.visualization.simplification.afterPositions}

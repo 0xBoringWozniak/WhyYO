@@ -9,6 +9,7 @@ import { useYoAllowance, useYoApprove, useYoDeposit } from "../lib/yo-sdk";
 import { cn, formatPct, formatUsd } from "../lib/utils";
 import { AssetIcon } from "./asset-icon";
 import { MethodologyLink, METHODOLOGY_SECTION_IDS } from "./methodology-link";
+import { renderLinkedMetricText } from "./recommendation-explanation";
 import { Button, Card } from "./ui";
 
 type IdleSourcePlan = {
@@ -294,6 +295,8 @@ export const DepositDrawer = ({
   const wrsDelta = formatDelta(recommendation.metrics.weightedRiskBefore, recommendation.metrics.weightedRiskAfter, 2);
   const savingsDelta = formatDelta(recommendation.metrics.savingsScoreBefore, recommendation.metrics.savingsScoreAfter, 1);
   const executionStateLabel = getExecutionStateLabel(recommendation);
+  const explanationBullets = recommendation.llmExplanation?.bullets?.slice(0, 3) ?? [];
+  const hasLlmExplanation = Boolean(recommendation.llmExplanation?.summary || explanationBullets.length);
   const hhiReductionPct =
     recommendation.metrics.protocolHHIBefore != null &&
     recommendation.metrics.protocolHHIAfter != null &&
@@ -341,7 +344,8 @@ export const DepositDrawer = ({
                   </div>
                   <h3 className="mt-2 text-3xl font-semibold text-white">{recommendation.vaultSymbol}</h3>
                   <div className="mt-2 text-base text-white/58">
-                    {recommendation.bucket} bucket · {recommendation.primaryIntent.replaceAll("_", " ")}
+                    {recommendation.bucket} bucket ·{" "}
+                    <span className="text-[#ffd84d]">{recommendation.primaryIntent.replaceAll("_", " ")}</span>
                   </div>
                 </div>
               </div>
@@ -392,17 +396,11 @@ export const DepositDrawer = ({
                       </div>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-4">
                       <div className="text-base text-white/74">
-                        Available balance: {formatUsd(idleSourcePlan.availableUsd)}
+                        Balance: {formatUsd(idleSourcePlan.availableUsd)}
                         <div className="mt-1 text-sm text-white/48">
                           {formatAmount(idleSourcePlan.availableAmount)} {idleSourcePlan.symbol}
-                        </div>
-                      </div>
-                      <div className="text-base text-white/74">
-                        Recommended deposit: {formatUsd(idleSourcePlan.recommendedUsd)}
-                        <div className="mt-1 text-sm text-white/48">
-                          {formatAmount(idleSourcePlan.recommendedAmount)} {idleSourcePlan.symbol}
                         </div>
                       </div>
                     </div>
@@ -497,7 +495,23 @@ export const DepositDrawer = ({
                 <div className="text-xs uppercase tracking-[0.2em] text-white/42">Why it may make sense</div>
 
                 <div className="rounded-[22px] border border-white/10 bg-black/35 p-4 text-[1.02rem] leading-8 text-white/78">
-                  {recommendation.recommendationType === "no_incremental_improvement" ? (
+                  {hasLlmExplanation ? (
+                    <div className="space-y-4">
+                      {recommendation.llmExplanation?.summary ? (
+                        <p>{renderLinkedMetricText(recommendation.llmExplanation.summary)}</p>
+                      ) : null}
+                      {explanationBullets.length ? (
+                        <ul className="space-y-3 text-white/74">
+                          {explanationBullets.map((bullet, index) => (
+                            <li key={`drawer-llm-bullet-${index}`} className="flex gap-3 leading-7">
+                              <span className="text-lime">•</span>
+                              <span>{renderLinkedMetricText(bullet)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ) : recommendation.recommendationType === "no_incremental_improvement" ? (
                     <div className="space-y-3">
                       <p>
                       A modeled <MetricHighlight>{formatUsd(recommendation.suggestedUsd)}</MetricHighlight> shift would improve concentration{" "}
@@ -553,20 +567,12 @@ export const DepositDrawer = ({
                     <span className="font-semibold text-lime">{formatPct(recommendation.metrics.vaultApyPct)}</span>
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-4">
-                    <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.overlap}>Overlap</MethodologyLink>
-                    <span>{formatPct(recommendation.metrics.protocolOverlapPct)}</span>
+                    <span>Idle capital</span>
+                    <span>{formatUsd(recommendation.metrics.idleAssetUsd)}</span>
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-4">
-                    <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.yoShare}>YO share</MethodologyLink>
-                    <span>{formatPct(recommendation.metrics.existingYoSharePct * 100)}</span>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between gap-4">
-                    <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.vaultHighRisk}>Vault high-risk</MethodologyLink>
-                    <span>
-                      {recommendation.metrics.vaultHighRiskExposurePct === null
-                        ? "n/a"
-                        : formatPct(recommendation.metrics.vaultHighRiskExposurePct)}
-                    </span>
+                    <span>Est. annual yield</span>
+                    <span className="font-semibold text-lime">{formatUsd(recommendation.metrics.estimatedAnnualYieldOpportunityUsd ?? 0)}</span>
                   </div>
                 </div>
 
