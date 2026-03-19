@@ -491,38 +491,41 @@ const ConnectOverlay = ({
 }) => {
   if (!open) return null;
 
+  const isGuestAddressReady = isValidWalletAddress(addressDraft.trim());
+
   return (
     <div className="fixed inset-0 z-[68] flex items-center justify-center overflow-hidden bg-black px-6">
       <OverlayBackdrop />
-      <Card className="relative z-10 w-full max-w-[1100px] p-8">
-        <div className="grid gap-4 md:grid-cols-[0.48fr_0.52fr]">
-          <div className="rounded-[28px] border border-white/8 bg-black/45 p-6">
-            <div className="text-xs uppercase tracking-[0.2em] text-white/42">Wallet connection</div>
-            <div className="mt-4 text-[2rem] font-semibold text-white">Connect browser wallet</div>
-            <div className="mt-8">
-              <Button className="min-w-[220px] px-8 py-4 text-base" onClick={onConnect} disabled={isConnecting}>
-                {isConnecting ? "Connecting..." : "Connect wallet"}
-              </Button>
-            </div>
-          </div>
+      <div className="relative z-10 w-full max-w-[760px]">
+        <div className="mx-auto flex w-full max-w-[620px] flex-col gap-4">
+          <Button className="w-full px-8 py-4 text-base" onClick={onConnect} disabled={isConnecting}>
+            {isConnecting ? "Connecting..." : "Connect wallet"}
+          </Button>
 
-          <div className="rounded-[28px] border border-white/8 bg-black/45 p-6">
-            <div className="text-xs uppercase tracking-[0.2em] text-white/42">Guest mode</div>
-            <div className="mt-4 text-[2rem] font-semibold text-white">Load public address</div>
+          <div className="flex w-full items-center gap-4">
             <input
               value={addressDraft}
               onChange={(event) => setAddressDraft(event.target.value)}
               placeholder="0x..."
-              className="mt-8 w-full rounded-[20px] border border-white/10 bg-[#141414] px-4 py-4 text-base text-white outline-none placeholder:text-white/25"
+              className="h-[56px] min-w-0 flex-1 rounded-full border border-white/10 bg-[#141414] px-5 text-base text-white outline-none placeholder:text-white/25"
             />
-            <div className="mt-4">
-              <Button variant="secondary" className="min-w-[220px] px-8 py-4 text-base" onClick={onUseAddress}>
-                Use public address
-              </Button>
-            </div>
+            <button
+              type="button"
+              aria-label="Use public address"
+              disabled={!isGuestAddressReady}
+              onClick={onUseAddress}
+              className={cn(
+                "inline-flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-full border text-xl font-semibold transition",
+                isGuestAddressReady
+                  ? "border-lime/28 bg-lime text-black shadow-[0_0_24px_rgba(215,255,31,0.18)] hover:bg-[#ebff71]"
+                  : "border-white/10 bg-white/6 text-white/24",
+              )}
+            >
+              ✓
+            </button>
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };
@@ -1313,12 +1316,14 @@ export const ScanShell = ({
 
             <div className="mt-8 grid gap-5 xl:grid-cols-[minmax(0,1.18fr)_minmax(420px,0.82fr)]">
               <div className="rounded-[42px] bg-lime px-8 py-7 text-black shadow-panel lg:px-9 lg:py-8">
-                <div className="flex min-h-full flex-col items-center justify-between text-center">
-                  <h1 className="yo-display max-w-5xl text-[4.3rem] leading-[0.9] md:text-[6rem]">
-                    YO GOT YO RISK OPTIMIZED, PERIOD.
-                  </h1>
+                <div className="flex min-h-full flex-col">
+                  <div className="flex flex-1 items-center justify-center text-center">
+                    <h1 className="yo-display max-w-5xl text-[4.3rem] leading-[0.9] md:text-[6rem]">
+                      YO GOT YO RISK OPTIMIZED, PERIOD.
+                    </h1>
+                  </div>
                   <div className="mt-6">
-                    <div className="flex flex-wrap items-center justify-center gap-3 xl:flex-nowrap">
+                    <div className="flex flex-wrap items-center gap-3 xl:flex-nowrap">
                       <Button
                         type="button"
                         variant="secondary"
@@ -1450,7 +1455,7 @@ export const ScanShell = ({
                     <>
                       <Button
                         className={cn(
-                          "absolute left-3 top-[58%] z-20 h-11 w-11 -translate-y-1/2 border-lime/18 bg-lime/20 px-0 text-lg text-lime shadow-[0_0_20px_rgba(215,255,31,0.12)] backdrop-blur-sm hover:bg-lime/28",
+                          "absolute left-3 top-[60.5%] z-20 h-10 w-10 -translate-y-1/2 border-lime/18 bg-lime/20 px-0 text-base text-lime shadow-[0_0_20px_rgba(215,255,31,0.12)] backdrop-blur-sm hover:bg-lime/28",
                           !canScrollRecommendationsPrev && "border-white/8 bg-white/8 text-white/20 shadow-none hover:bg-white/8",
                         )}
                         disabled={!canScrollRecommendationsPrev}
@@ -1465,7 +1470,7 @@ export const ScanShell = ({
                       </Button>
                       <Button
                         className={cn(
-                          "absolute right-3 top-[58%] z-20 h-11 w-11 -translate-y-1/2 border-lime/18 bg-lime/20 px-0 text-lg text-lime shadow-[0_0_20px_rgba(215,255,31,0.12)] backdrop-blur-sm hover:bg-lime/28",
+                          "absolute right-3 top-[60.5%] z-20 h-10 w-10 -translate-y-1/2 border-lime/18 bg-lime/20 px-0 text-base text-lime shadow-[0_0_20px_rgba(215,255,31,0.12)] backdrop-blur-sm hover:bg-lime/28",
                           !canScrollRecommendationsNext && "border-white/8 bg-white/8 text-white/20 shadow-none hover:bg-white/8",
                         )}
                         disabled={!canScrollRecommendationsNext}
