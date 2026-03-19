@@ -35,7 +35,7 @@ const scanningSteps = [
   "Creating recommendations...",
 ];
 
-const thinkingPhrases = [
+const thinkingPhrasesV0 = [
   "Loading data from blockchain.",
   "Collecting risk scores.",
   "Idle assets are scored separately from productive DeFi positions.",
@@ -43,6 +43,16 @@ const thinkingPhrases = [
   "YO recommendations are bucket-specific.",
   "Unknown coverage lowers recommendation confidence.",
   "LLM agent creates personal explanation.",
+];
+
+const thinkingPhrases = [
+  "Welcome to WhyYO",
+  "We'll help you get the most out of your DeFi assets with YO vaults",
+  "Loading portfolio data from on-chain",
+  "Bucket-specific recommendations are preparing",
+  "Calculating risk scores and diversification metrics for your positions",
+  "Determining optimal allocations and confidence levels",
+  "Finalizing personalized comments with our AI agent",
 ];
 
 const formatCoverage = (value: number | null) => (value === null ? "n/a" : formatPct(value * 100));
