@@ -26,6 +26,7 @@ export const setWalletReconnectEnabled = (enabled: boolean) => {
 export const wagmiConfig = createConfig({
   chains,
   connectors: [injected()],
+  multiInjectedProviderDiscovery: false,
   transports: {
     [base.id]: http("https://base-rpc.publicnode.com"),
     [mainnet.id]: http("https://ethereum-rpc.publicnode.com"),
