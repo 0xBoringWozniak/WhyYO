@@ -58,8 +58,8 @@ export const importRiskDataset = async (db: Pool = getDb()): Promise<RiskImportS
   const raw = await readFile(datasetPath, "utf8");
   const checksum = createHash("sha256").update(raw).digest("hex");
   const parsed = normalizeRiskDatasetInput(riskDatasetSchema.parse(JSON.parse(raw)));
-  const existing = await db.query<{ id: string }>(
-    "SELECT id FROM risk_dataset_versions WHERE checksum_sha256 = $1 LIMIT 1",
+  const existing = await db.query<{ id: string; is_active: boolean }>(
+    "SELECT id, is_active FROM risk_dataset_versions WHERE checksum_sha256 = $1 LIMIT 1",
     [checksum],
   );
 
@@ -84,8 +84,25 @@ export const importRiskDataset = async (db: Pool = getDb()): Promise<RiskImportS
     }
   }
 
+  const summaryFor = (datasetVersionId: string): RiskImportSummary => ({
+    checksum,
+    datasetVersionId,
+    rawPoolCount: parsed.data.pools.length,
+    yoPoolCount: parsed.data.yo_pools.length,
+    uniqueProtocolFamilies: uniqueProtocolFamilies.size,
+    uniqueBlockchains: uniqueChains.size,
+    unknownBucketCount,
+    duplicateSlugWarnings: [...duplicateSlugWarnings],
+    duplicateTitleWarnings: [...duplicateTitleWarnings],
+  });
+
+  const existingRow = existing.rows[0];
+  if (existingRow?.is_active) {
+    return summaryFor(existingRow.id);
+  }
+
   const client = await db.connect();
-  let datasetVersionId = existing.rows[0]?.id;
+  let datasetVersionId = existingRow?.id;
   try {
     await client.query("BEGIN");
 
@@ -135,6 +152,11 @@ export const importRiskDataset = async (db: Pool = getDb()): Promise<RiskImportS
           }),
         ],
       );
+
+      await client.query("UPDATE risk_dataset_versions SET is_active = FALSE");
+      await client.query("UPDATE risk_dataset_versions SET is_active = TRUE WHERE id = $1", [datasetVersionId]);
+      await client.query("COMMIT");
+      return summaryFor(datasetVersionId);
     }
 
     await client.query("UPDATE risk_dataset_versions SET is_active = FALSE");
@@ -272,15 +294,5 @@ export const importRiskDataset = async (db: Pool = getDb()): Promise<RiskImportS
     client.release();
   }
 
-  return {
-    checksum,
-    datasetVersionId: datasetVersionId!,
-    rawPoolCount: parsed.data.pools.length,
-    yoPoolCount: parsed.data.yo_pools.length,
-    uniqueProtocolFamilies: uniqueProtocolFamilies.size,
-    uniqueBlockchains: uniqueChains.size,
-    unknownBucketCount,
-    duplicateSlugWarnings: [...duplicateSlugWarnings],
-    duplicateTitleWarnings: [...duplicateTitleWarnings],
-  };
+  return summaryFor(datasetVersionId!);
 };

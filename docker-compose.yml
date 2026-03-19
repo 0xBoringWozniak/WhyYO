@@ -1,8 +1,15 @@
 version: "3.9"
 
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
     image: postgres:16-alpine
+    logging: *default-logging
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -19,6 +26,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    logging: *default-logging
     ports:
       - "6379:6379"
     volumes:
@@ -33,6 +41,7 @@ services:
     build:
       context: .
       dockerfile: infrastructure/docker/api.Dockerfile
+    logging: *default-logging
     env_file:
       - .env
     environment:
@@ -49,6 +58,7 @@ services:
     build:
       context: .
       dockerfile: infrastructure/docker/api.Dockerfile
+    logging: *default-logging
     env_file:
       - .env
     ports:
@@ -77,6 +87,7 @@ services:
     build:
       context: .
       dockerfile: infrastructure/docker/worker.Dockerfile
+    logging: *default-logging
     env_file:
       - .env
     depends_on:
@@ -92,6 +103,7 @@ services:
     build:
       context: .
       dockerfile: infrastructure/docker/web.Dockerfile
+    logging: *default-logging
     env_file:
       - .env
     ports:

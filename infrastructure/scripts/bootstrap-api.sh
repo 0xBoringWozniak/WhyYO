@@ -6,8 +6,11 @@ set -eu
 
 pnpm --filter @whyyo/api migrate
 pnpm --filter @whyyo/api seed:aliases
-pnpm --filter @whyyo/api risk:import
-pnpm --filter @whyyo/api risk:verify || true
+
+if [ "${RISK_DATASET_IMPORT_ON_BOOT:-true}" = "true" ]; then
+  pnpm --filter @whyyo/api risk:import
+  pnpm --filter @whyyo/api risk:verify || true
+fi
 
 if [ "${BOOTSTRAP_ONLY:-false}" = "true" ]; then
   exit 0

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
 import "./globals.css";
 import { ClientErrorReporter } from "../components/client-error-reporter";
@@ -21,10 +21,12 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           } as React.CSSProperties
         }
       >
-        <Providers>
-          <ClientErrorReporter />
-          {children}
-        </Providers>
+        <Suspense fallback={children}>
+          <Providers>
+            <ClientErrorReporter />
+            {children}
+          </Providers>
+        </Suspense>
       </body>
     </html>
   );
