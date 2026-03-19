@@ -1,8 +1,12 @@
 # Risk Dataset
 
-`risk-dataset.json` is the active local bootstrap file used by the API and worker startup scripts.
+`risk-dataset.json` is the local bootstrap file that the API imports into Postgres during environment startup.
 
-Expected top-level shape:
+## Supported Formats
+
+The importer accepts:
+
+1. a wrapped object shaped like this
 
 ```json
 {
@@ -17,16 +21,40 @@ Expected top-level shape:
 }
 ```
 
-The importer also accepts a flat top-level array of pool rows and will automatically split it into `pools` and `yo_pools` using deterministic YO pool heuristics.
+2. or a flat top-level array of pool rows
 
-Startup flow:
+In the second case, the importer deterministically splits rows into `pools` and `yo_pools`.
 
-1. `bootstrap-api.sh` runs migrations.
-2. `import-risk-dataset.ts` validates and imports the JSON into Postgres.
-3. `verify-risk-dataset.ts` can be run manually or in non-fatal debug mode.
+## How It Is Used
 
-To replace the dataset:
+During `docker-compose up --build`, the bootstrap flow does the following:
 
-1. Replace `risk-dataset.json`.
-2. Restart `docker-compose`.
-3. The importer creates a new dataset version if the checksum changed.
+1. runs database migrations
+2. seeds dev aliases for canonical protocols
+3. runs `risk:import`
+4. runs `risk:verify` in non-fatal mode
+
+The default active path is configured through:
+
+```env
+RISK_DATASET_SOURCE=file
+RISK_DATASET_FILE=/app/data/risk/risk-dataset.json
+RISK_DATASET_IMPORT_ON_BOOT=true
+```
+
+After import, the data is stored in:
+
+- `risk_dataset_versions`
+- `risk_pools`
+- `risk_pool_assets`
+- `risk_blockchains`
+
+At runtime, the API reads the imported and normalized data from Postgres rather than from the raw JSON file directly.
+
+## Updating the Dataset
+
+1. Replace `risk-dataset.json`
+2. Restart the stack or run `pnpm risk:import` manually
+3. Validate the result with `pnpm risk:verify`
+
+If the checksum changed, the importer creates a new dataset version.

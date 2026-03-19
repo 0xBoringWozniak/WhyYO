@@ -1,87 +1,101 @@
-# Why YO
+# WhyYO
 
-Why YO is a DeFi portfolio analysis and recommendation system. It scans a connected wallet, normalizes protocol and token exposure, computes deterministic risk and concentration metrics, compares the portfolio against YO vaults, generates explanations, and supports direct deposit flows from the web app.
+WhyYO is a DeFi portfolio scanner and recommendation engine for YO vaults. It connects a wallet, normalizes positions from external providers, computes risk and concentration metrics across `USD` / `ETH` / `BTC` buckets, compares the current portfolio with available YO strategies, and highlights where allocation can be simplified or idle capital can be activated.
 
-## What the system does
+The recommendation engine is deterministic: metrics and decision rules are computed first, and explanation text is added on top afterward.
 
-- Connects a wallet and starts a portfolio scan from the web app
-- Pulls balances, protocol positions, and token exposure from external integrations
-- Normalizes raw positions into canonical portfolio data
-- Splits exposure into USD, ETH, BTC, and other buckets
-- Computes bucket metrics such as risk, coverage, concentration, idle capital, and savings score
-- Reads YO vault data and compares each bucket against available vault strategies
-- Ranks recommendations with deterministic rules instead of LLM scoring
-- Generates human-readable recommendation summaries
-- Supports direct YO deposit flows in the same interface
-- Persists scans, metrics, recommendations, and explanation jobs
+Key formulas:
 
-## System layout
+$$
+WRS_b = \sum_i \left(\frac{usd_i}{DIV_b}\right) \cdot risk_i
+$$
 
-- `apps/web`: Next.js frontend for wallet connection, scan results, and deposit flows
-- `apps/api`: Fastify API for scanning, normalization, ranking, persistence, and data serving
-- `apps/worker`: background worker for async explanation generation
-- `packages/domain`: core formulas, normalization, matching, metrics, and ranking logic
-- `packages/integrations`: external schemas and HTTP clients
-- `packages/shared`: shared types, schemas, constants, and methodology content
-- `data/risk`: local risk dataset bootstrap file
-- `infrastructure`: Dockerfiles and bootstrap scripts
+$$
+Coverage_b = 1 - URE_b
+$$
 
-## Data flow
+$$
+SPS_b = 100 \cdot (1 - Penalty_b)
+$$
 
-1. User connects a wallet in the web app.
-2. The API loads wallet positions, YO vault data, aliases, and risk dataset rows.
-3. Raw data is normalized into canonical exposures.
-4. The system computes bucket metrics and compares them with YO vault metrics.
-5. The ranker produces recommendation candidates.
-6. The API returns deterministic results and optional explanation text.
-7. The user can continue into the YO deposit flow from the UI.
+## Technical Overview
 
-## Main capabilities
+### Monorepo Layout
 
-- Deterministic portfolio scoring and recommendation ranking
-- Canonical protocol and token normalization
-- Risk dataset import and verification
-- Bucket-aware recommendation logic for USD, ETH, and BTC
-- Sync or async explanation generation
-- Local end-to-end stack with web, API, worker, Postgres, and Redis
+- `apps/web` - Next.js UI for wallet connection, scan results, and YO deposit flow
+- `apps/api` - Fastify API for the scan pipeline, normalization, metrics, ranking, and persistence
+- `apps/worker` - BullMQ worker for async explanations
+- `packages/domain` - formulas, bucket metrics, and ranker logic
+- `packages/shared` - shared schemas, types, and methodology contracts
+- `packages/integrations` - external clients and integration adapters
+- `data/risk` - local bootstrap dataset used for risk import
 
-## Recommendation methodology
+### Stack
 
-- `Weighted risk (WRS)`: average risk score of productive DeFi positions only. Idle balances are excluded so wallet cash does not dilute protocol risk.
-  `WRS_b = Σ (usd_i / DIV_b) × risk_i`
-- `Risk coverage`: share of productive DeFi capital with public risk mapping. This is used both in user-facing trust messaging and in recommendation caution rules.
-  `Coverage_b = 1 - URE_b`
-- `Savings score (SPS)`: heuristic 0-100 bucket quality score that blends weighted risk, high-risk exposure, protocol concentration, structural complexity, unknown exposure, and idle drag. Higher is better, but it is not a yield forecast.
-  `SPS_b = 100 × (1 - penalty_b)`
+- Node.js `>=22`
+- `pnpm`
+- Next.js 15, React 19
+- Fastify
+- Postgres 16
+- Redis 7
+- Docker Compose
 
-## Run locally
+### Quick Start
 
 1. Copy `.env.example` to `.env`
-2. Fill the required environment variables:
+2. Fill at least:
    - `DEBANK_ACCESS_KEY`
    - `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
    - `BASE_RPC_URL`
+   - `OPENAI_API_KEY` only if you want live explanations
 3. Start the stack:
 
 ```bash
 docker-compose up --build
 ```
 
-Available services:
+Services:
 
-- Web: [http://localhost:3000](http://localhost:3000)
-- API: [http://localhost:8080](http://localhost:8080)
-- Swagger: [http://localhost:8080/docs](http://localhost:8080/docs)
+- Web: `http://localhost:3000`
+- API: `http://localhost:8080`
+- Swagger: `http://localhost:8080/docs`
 
-## Development notes
+### Dev Commands
 
-- The active risk bootstrap file is [data/risk/risk-dataset.json](data/risk/risk-dataset.json)
-- `pnpm test` runs the project test suite
-- `pnpm --filter @whyyo/api risk:verify` validates the active risk dataset
-- `RUN_LIVE_BACKEND_E2E=true pnpm test:e2e-live` runs a live backend scan flow
+```bash
+pnpm dev
+pnpm test
+pnpm typecheck
+pnpm risk:import
+pnpm risk:verify
+pnpm db:migrate
+```
 
-## Documentation
+### Bootstrap Flow
 
-- Architecture: [docs/architecture.md](docs/architecture.md)
-- Setup: [docs/setup.md](docs/setup.md)
-- API: [docs/api.md](docs/api.md)
+The `bootstrap` service:
+
+1. waits for `postgres` and `redis`
+2. runs database migrations
+3. seeds canonical protocol aliases
+4. imports `data/risk/risk-dataset.json`
+5. runs verification in non-fatal mode
+
+After that, `api` and `worker` start.
+
+### Core API Endpoints
+
+- `POST /api/v1/scan/start`
+- `POST /api/v1/scan/refresh`
+- `GET /api/v1/scan/:scanId`
+- `GET /api/v1/system/health`
+- `GET /api/v1/system/readiness`
+- `GET /api/v1/methodology`
+
+### Documentation
+
+- [docs/architecture.md](docs/architecture.md)
+- [docs/setup.md](docs/setup.md)
+- [docs/api.md](docs/api.md)
+- [docs/methodology.md](docs/methodology.md)
+- [data/risk/README.md](data/risk/README.md)
