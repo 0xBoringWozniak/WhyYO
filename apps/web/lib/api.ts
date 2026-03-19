@@ -2,7 +2,8 @@
 
 import type { ScanResponse } from "@whyyo/shared";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+const apiUrl = rawApiUrl ? rawApiUrl.replace(/\/+$/, "") : "http://localhost:8080";
 const TRANSIENT_SCAN_RETRY_COUNT = 4;
 
 const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -17,6 +18,9 @@ const readErrorMessage = async (response: Response, fallback: string) => {
     }
 
     const text = (await response.text()).trim();
+    if (contentType.includes("text/html") || /^<!DOCTYPE html>/i.test(text)) {
+      return "The web app received HTML instead of JSON from the API. Check NEXT_PUBLIC_API_URL in the web build configuration.";
+    }
     return text ? text.slice(0, 240) : fallback;
   } catch {
     return fallback;

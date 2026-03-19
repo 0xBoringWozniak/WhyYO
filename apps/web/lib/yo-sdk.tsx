@@ -3,6 +3,56 @@
 import * as React from "react";
 import * as YoReact from "@yo-protocol/react";
 
+export type YoVaultStatsItem = {
+  id: string;
+  name: string;
+  asset: {
+    name: string;
+    symbol: string;
+    decimals: number;
+    address: string;
+  };
+  shareAsset: {
+    name: string;
+    symbol: string;
+    decimals: number;
+    address: string;
+  };
+  chain: {
+    id: number;
+    name: string;
+  };
+  contracts: {
+    vaultAddress: string;
+    authorityAddress?: string;
+  };
+  secondaryVaults?: Array<{
+    id: string;
+    name: string;
+    asset: {
+      name: string;
+      symbol: string;
+      decimals: number;
+      address: string;
+    };
+    shareAsset: {
+      name: string;
+      symbol: string;
+      decimals: number;
+      address: string;
+    };
+    chain: {
+      id: number;
+      name: string;
+    };
+    contracts: {
+      vaultAddress: string;
+      escrowAddress?: string | null;
+      authorityAddress?: string;
+    };
+  }>;
+};
+
 type MaybeComponent = React.ComponentType<React.PropsWithChildren<Record<string, unknown>>>;
 
 const yoModule = YoReact as unknown as Record<string, unknown>;
@@ -17,9 +67,9 @@ export const useYoVaults =
   ((options?: Record<string, unknown>) =>
     (
       yoModule.useVaults as
-        | ((hookOptions?: Record<string, unknown>) => { vaults?: unknown[]; isLoading?: boolean; data?: unknown[] })
+        | ((hookOptions?: Record<string, unknown>) => { vaults?: YoVaultStatsItem[]; isLoading?: boolean; data?: YoVaultStatsItem[] })
         | undefined
-    )?.(options) ?? { vaults: [], data: [], isLoading: false });
+    )?.(options) ?? { vaults: [] as YoVaultStatsItem[], data: [] as YoVaultStatsItem[], isLoading: false });
 
 export const useYoApprove =
   ((options?: Record<string, unknown>) =>

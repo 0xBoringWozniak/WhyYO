@@ -6,6 +6,7 @@ import { useChainId, useSwitchChain } from "wagmi";
 import type { RankedRecommendation } from "@whyyo/shared";
 
 import { getVaultAccent, getVaultLogoUrl } from "../lib/brand-assets";
+import type { IdleSourcePlan, WithdrawalPlanItem } from "../lib/idle-source-plan";
 import { getRecommendationConfidence } from "../lib/recommendation-confidence";
 import { useYoAllowance, useYoApprove, useYoDeposit } from "../lib/yo-sdk";
 import { cn, formatPct, formatUsd } from "../lib/utils";
@@ -14,26 +15,6 @@ import { ConfidenceBadge } from "./confidence-badge";
 import { MethodologyLink, METHODOLOGY_SECTION_IDS } from "./methodology-link";
 import { renderLinkedMetricText } from "./recommendation-explanation";
 import { Button, Card } from "./ui";
-
-type IdleSourcePlan = {
-  symbol: string;
-  chain: string;
-  chainId: number | null;
-  tokenAddress: string;
-  decimals: number;
-  logoUrl: string | null;
-  availableUsd: number;
-  availableAmount: number | null;
-  recommendedUsd: number;
-  recommendedAmount: number | null;
-};
-
-type WithdrawalPlanItem = {
-  protocolName: string;
-  strategyLabel: string;
-  usdValue: number;
-  chain: string;
-};
 
 // Official YO gateway address from the SDK constants.
 const YO_GATEWAY_ADDRESS = "0xF1EeE0957267b1A474323Ff9CfF7719E964969FA";

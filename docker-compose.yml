@@ -103,6 +103,8 @@ services:
     build:
       context: .
       dockerfile: infrastructure/docker/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     logging: *default-logging
     env_file:
       - .env

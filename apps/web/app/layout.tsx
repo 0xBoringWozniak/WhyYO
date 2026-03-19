@@ -6,7 +6,14 @@ import { ClientErrorReporter } from "../components/client-error-reporter";
 import { Providers } from "../components/providers";
 
 export const metadata: Metadata = {
-  title: "Why YO?",
+  title: {
+    default: "WHY YO?",
+    template: "%s",
+  },
+  applicationName: "WHY YO?",
+  appleWebApp: {
+    title: "WHY YO?",
+  },
   description: "Deterministic DeFi savings analysis for YO vault recommendations.",
 };
 

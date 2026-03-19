@@ -10,6 +10,7 @@ import type { BucketMetrics, CanonicalProtocolExposure, CanonicalTokenExposure, 
 import { refreshScan, startScan } from "../lib/api";
 import { getVaultAccent, getVaultLogoUrl, yoBrandMarkUrl } from "../lib/brand-assets";
 import { reportClientError } from "../lib/client-error-reporting";
+import { buildIdleSourcePlan, buildWithdrawalPlan } from "../lib/idle-source-plan";
 import {
   getCoverageTrustStatus,
   getOverlapTrustStatus,
@@ -20,6 +21,7 @@ import {
 } from "../lib/recommendation-confidence";
 import { cn, formatPct, formatUsd } from "../lib/utils";
 import { setWalletReconnectEnabled } from "../lib/wagmi";
+import { useYoVaults } from "../lib/yo-sdk";
 import { useScanStore } from "../store/use-scan-store";
 import { AssetIcon } from "./asset-icon";
 import { ConfidenceBadge } from "./confidence-badge";
@@ -110,149 +112,7 @@ type BucketTokenChip = {
   logoUrl: string | null;
 };
 
-type IdleSourcePlan = {
-  symbol: string;
-  chain: string;
-  chainId: number | null;
-  tokenAddress: string;
-  decimals: number;
-  logoUrl: string | null;
-  availableUsd: number;
-  availableAmount: number | null;
-  recommendedUsd: number;
-  recommendedAmount: number | null;
-};
-
-type WithdrawalPlanItem = {
-  protocolName: string;
-  strategyLabel: string;
-  usdValue: number;
-  chain: string;
-};
-
-const USD_BUCKET_SYMBOLS = new Set(["USD", "USDC", "USDT", "USDS", "DAI", "USDE", "USDBC"]);
-const ETH_BUCKET_SYMBOLS = new Set(["ETH", "WETH", "STETH", "WSTETH", "WEETH", "CBETH", "EETH"]);
-const BTC_BUCKET_SYMBOLS = new Set(["BTC", "WBTC", "CBBTC", "TBTC", "SOLVBTC.JUP", "SOLVBTC"]);
-
-const pickBucketSymbolSet = (bucket: string) => {
-  if (bucket === "USD") return USD_BUCKET_SYMBOLS;
-  if (bucket === "ETH") return ETH_BUCKET_SYMBOLS;
-  if (bucket === "BTC") return BTC_BUCKET_SYMBOLS;
-  return new Set<string>();
-};
-
-const CHAIN_TO_ID: Partial<Record<CanonicalTokenExposure["chain"], number>> = {
-  ethereum: 1,
-  base: 8453,
-  arbitrum: 42161,
-  optimism: 10,
-  polygon: 137,
-};
-
-const inferTokenDecimals = (symbol: string, bucket: string) => {
-  const normalized = symbol.toUpperCase();
-  if (bucket === "USD" || normalized.includes("USDC") || normalized.includes("USDT") || normalized.includes("USDS") || normalized === "DAI") {
-    return 6;
-  }
-  if (bucket === "BTC" || normalized.includes("BTC")) {
-    return 8;
-  }
-  return 18;
-};
-
 const isValidWalletAddress = (value: string) => /^0x[a-fA-F0-9]{40}$/.test(value.trim());
-
-const buildIdleSourcePlan = ({
-  recommendation,
-  tokenExposures,
-  protocolExposures,
-}: {
-  recommendation: RankedRecommendation;
-  tokenExposures: CanonicalTokenExposure[];
-  protocolExposures: CanonicalProtocolExposure[];
-}): IdleSourcePlan | null => {
-  const targetIdleUsd = Math.min(recommendation.suggestedUsd, recommendation.suggestedAmounts.idleFirstUsd);
-  if (targetIdleUsd <= 0) return null;
-
-  const bucketSymbols = pickBucketSymbolSet(recommendation.bucket);
-  const idleSymbols = new Set(
-    protocolExposures
-      .filter((protocol) => protocol.bucket === recommendation.bucket && protocol.strategyType === "spot_idle")
-      .flatMap((protocol) => protocol.assetSymbols)
-      .map((symbol) => symbol.toUpperCase()),
-  );
-
-  const candidates = tokenExposures
-    .filter((token) => token.bucket === recommendation.bucket)
-    .filter((token) => {
-      const symbol = (token.parentSymbol ?? token.symbol).toUpperCase();
-      return idleSymbols.has(symbol) || bucketSymbols.has(symbol);
-    })
-    .sort((left, right) => right.usdValue - left.usdValue);
-
-  const best = candidates[0];
-  if (!best) return null;
-
-  const availableUsd = best.usdValue;
-  const recommendedUsd = Math.min(targetIdleUsd, availableUsd);
-  const unitPrice = best.amount && best.amount > 0 ? best.usdValue / best.amount : null;
-  const recommendedAmount = unitPrice && unitPrice > 0 ? recommendedUsd / unitPrice : null;
-
-  return {
-    symbol: best.parentSymbol ?? best.symbol,
-    chain: best.chain,
-    chainId: CHAIN_TO_ID[best.chain] ?? null,
-    tokenAddress: best.tokenAddress ?? "",
-    decimals: inferTokenDecimals(best.parentSymbol ?? best.symbol, recommendation.bucket),
-    logoUrl: best.logoUrl ?? null,
-    availableUsd,
-    availableAmount: best.amount ?? null,
-    recommendedUsd,
-    recommendedAmount,
-  };
-};
-
-const buildWithdrawalPlan = ({
-  recommendation,
-  protocolExposures,
-  idleSourcePlan,
-}: {
-  recommendation: RankedRecommendation;
-  protocolExposures: CanonicalProtocolExposure[];
-  idleSourcePlan?: IdleSourcePlan | null;
-}): WithdrawalPlanItem[] => {
-  const targetUsd = Math.max(
-    0,
-    Math.max(recommendation.suggestedUsd, recommendation.suggestedAmounts.highRiskOnlyUsd) - (idleSourcePlan?.recommendedUsd ?? 0),
-  );
-  if (targetUsd <= 0) return [];
-
-  const productive = protocolExposures
-    .filter((protocol) => protocol.bucket === recommendation.bucket && protocol.strategyType !== "spot_idle")
-    .filter((protocol) => protocol.canonicalProtocolId !== "yo")
-    .filter((protocol) => (protocol.originalProtocolName ?? protocol.canonicalProtocolName).toLowerCase() !== "yo")
-    .sort((left, right) => {
-      const riskBias = (right.riskScore >= 3 ? 1 : 0) - (left.riskScore >= 3 ? 1 : 0);
-      if (riskBias !== 0) return riskBias;
-      return right.usdValue - left.usdValue;
-    });
-
-  const selected: WithdrawalPlanItem[] = [];
-  let coveredUsd = 0;
-
-  for (const protocol of productive) {
-    if (coveredUsd >= targetUsd && selected.length > 0) break;
-    selected.push({
-      protocolName: protocol.originalProtocolName ?? protocol.canonicalProtocolName,
-      strategyLabel: protocol.strategyType.replaceAll("_", " "),
-      usdValue: protocol.usdValue,
-      chain: protocol.chain,
-    });
-    coveredUsd += protocol.usdValue;
-  }
-
-  return selected.slice(0, 3);
-};
 
 const getBucketTokens = (tokens: CanonicalTokenExposure[], bucket: string): BucketTokenChip[] => {
   const grouped = new Map<string, BucketTokenChip>();
@@ -761,12 +621,14 @@ const RecommendationCard = ({
   onConnectRequest,
   tokenExposures,
   protocolExposures,
+  yoVaults,
 }: {
   recommendation: RankedRecommendation;
   walletAddress: string;
   onConnectRequest: () => void;
   tokenExposures: CanonicalTokenExposure[];
   protocolExposures: CanonicalProtocolExposure[];
+  yoVaults: NonNullable<ReturnType<typeof useYoVaults>["vaults"]>;
 }) => {
   const accent = getVaultAccent(recommendation.vaultSymbol);
   const showDepositButton = recommendation.suggestedUsd > 0;
@@ -774,6 +636,7 @@ const RecommendationCard = ({
     recommendation,
     tokenExposures,
     protocolExposures,
+    vaults: yoVaults ?? [],
   });
   const withdrawalPlan = buildWithdrawalPlan({
     recommendation,
@@ -953,9 +816,13 @@ export const ScanShell = ({
   const { connect, connectors, isPending: isConnecting } = useConnect();
   const { disconnect } = useDisconnect();
   const { phase, scan, error, hasHydrated, setPhase, setScan, setError } = useScanStore();
-  const [bootStage, setBootStage] = React.useState<BootStage>(initialBootStage ?? (initialWalletAddress ? "active" : "intro"));
+  const connectParam = searchParams.get("connect");
+  const resumeParam = searchParams.get("resume");
+  const requestedConnectScreen = !initialWalletAddress && connectParam === "1";
+  const initialStage = initialBootStage ?? (requestedConnectScreen ? "connect" : initialWalletAddress ? "active" : "intro");
+  const [bootStage, setBootStage] = React.useState<BootStage>(initialStage);
   const [addressDraft, setAddressDraft] = React.useState(initialWalletAddress ?? "");
-  const [forceConnectChoice, setForceConnectChoice] = React.useState(false);
+  const [forceConnectChoice, setForceConnectChoice] = React.useState(requestedConnectScreen);
   const lastAutoScannedWallet = React.useRef<string | null>(null);
   const recommendationsScrollerRef = React.useRef<HTMLDivElement | null>(null);
   const [canScrollRecommendationsPrev, setCanScrollRecommendationsPrev] = React.useState(false);
@@ -970,14 +837,12 @@ export const ScanShell = ({
   const scanMatchesActiveWallet = Boolean(normalizedActiveWalletAddress) && normalizedScanOwnerAddress === normalizedActiveWalletAddress;
   const visibleScan = scanMatchesActiveWallet ? scan : null;
   const isConnectedWalletView = Boolean(address && !initialWalletAddress);
-  const resumeParam = searchParams.get("resume");
-  const connectParam = searchParams.get("connect");
 
   React.useEffect(() => {
     setAddressDraft(initialWalletAddress ?? "");
-    setForceConnectChoice(false);
-    setBootStage(initialBootStage ?? (initialWalletAddress ? "active" : "intro"));
-  }, [initialBootStage, initialWalletAddress]);
+    setForceConnectChoice(requestedConnectScreen);
+    setBootStage(initialStage);
+  }, [initialStage, initialWalletAddress, requestedConnectScreen]);
 
   React.useEffect(() => {
     if (initialWalletAddress) return;
@@ -1153,30 +1018,47 @@ export const ScanShell = ({
     setWalletReconnectEnabled(true);
   }, [address, initialWalletAddress, isConnected]);
 
+  const replaceUrlToConnectChoice = React.useCallback(() => {
+    if (typeof window === "undefined") return;
+
+    const url = new URL(window.location.href);
+    if (url.pathname !== "/") {
+      router.push("/?connect=1");
+      return;
+    }
+
+    url.searchParams.set("connect", "1");
+    url.searchParams.delete("resume");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [router]);
+
   const goToIntroScreen = React.useCallback(() => {
+    if (initialWalletAddress) {
+      setWalletReconnectEnabled(false);
+      router.replace("/?connect=1");
+      return;
+    }
+
     setWalletReconnectEnabled(false);
     setScan(null);
     setError(null);
     setPhase("idle");
     lastAutoScannedWallet.current = null;
-    if (initialWalletAddress) {
-      router.push("/?connect=1");
-      return;
-    }
     setForceConnectChoice(true);
     setBootStage("connect");
-    router.push("/?connect=1");
-  }, [initialWalletAddress, router, setError, setPhase, setScan]);
+    replaceUrlToConnectChoice();
+  }, [initialWalletAddress, replaceUrlToConnectChoice, router, setError, setPhase, setScan]);
 
   const openConnectChoice = React.useCallback(() => {
+    if (initialWalletAddress) {
+      router.replace("/?connect=1");
+      return;
+    }
+
     setScan(null);
     setError(null);
     setPhase("idle");
     lastAutoScannedWallet.current = null;
-    if (initialWalletAddress) {
-      window.location.assign("/?connect=1");
-      return;
-    }
     if (isConnected || address) {
       setForceConnectChoice(false);
       setBootStage("active");
@@ -1203,12 +1085,26 @@ export const ScanShell = ({
     setBootStage("connect");
   }, [address, disconnect, initialWalletAddress, setError, setPhase, setScan]);
 
-  const loadingVisible =
+  const awaitingConnectScanHandoff =
+    bootStage === "connect" && Boolean(activeWalletAddress) && !forceConnectChoice && !visibleScan && !error;
+  const awaitingInitialWalletScan =
     bootStage === "active" &&
+    Boolean(activeWalletAddress) &&
+    !visibleScan &&
+    !error &&
+    lastAutoScannedWallet.current !== normalizedActiveWalletAddress;
+  const loadingVisible =
     Boolean(activeWalletAddress) &&
     !error &&
     !visibleScan &&
-    (phase === "scanning" || mutation.isPending || refreshMutation.isPending);
+    (
+      phase === "scanning" ||
+      mutation.isPending ||
+      refreshMutation.isPending ||
+      Boolean(initialWalletAddress) ||
+      awaitingConnectScanHandoff ||
+      awaitingInitialWalletScan
+    );
 
   const connectInjectedWallet = () => {
     if (isConnected || address) {
@@ -1239,7 +1135,7 @@ export const ScanShell = ({
     setError(null);
     setPhase("idle");
     lastAutoScannedWallet.current = null;
-    window.location.assign(`/${addressDraft.trim()}`);
+    router.push(`/${addressDraft.trim()}`);
   };
 
   const totalValue = visibleScan?.portfolioOverview.totalUsd ?? 0;
@@ -1251,6 +1147,7 @@ export const ScanShell = ({
   const tokenExposures = visibleScan?.portfolioOverview.tokenExposures ?? [];
   const protocolExposures = visibleScan?.portfolioOverview.protocolExposures ?? [];
   const analyzedUsd = visibleScan?.portfolioOverview.analyzedUsd ?? 0;
+  const { vaults: yoVaults = [] } = useYoVaults();
 
   React.useEffect(() => {
     const element = recommendationsScrollerRef.current;
@@ -1510,6 +1407,7 @@ export const ScanShell = ({
                           onConnectRequest={openConnectChoice}
                           tokenExposures={tokenExposures}
                           protocolExposures={protocolExposures}
+                          yoVaults={yoVaults}
                         />
                       ))}
                     </div>
