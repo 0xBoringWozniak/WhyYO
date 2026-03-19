@@ -1428,7 +1428,9 @@ export const ScanShell = ({
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <Card className="flex h-full flex-col space-y-3">
-                    <div className="text-xs uppercase tracking-[0.22em] text-white/42">Analyzed value</div>
+                    <div className="min-h-[2.9rem] text-xs uppercase leading-[1.45] tracking-[0.22em] text-white/42">
+                      Analyzed value
+                    </div>
                     <div className="min-h-[8.5rem] font-display text-5xl leading-none text-lime">
                       {formatUsd(analyzedUsd)}{" "}
                       <span className="text-[2.2rem] text-white/72">({formatPct(analyzedPct)})</span>
@@ -1439,7 +1441,9 @@ export const ScanShell = ({
                   </Card>
 
                   <Card className="flex h-full flex-col space-y-3">
-                    <div className="text-xs uppercase tracking-[0.22em] text-white/42">Why YO? Let the numbers speak.</div>
+                    <div className="min-h-[2.9rem] text-xs uppercase leading-[1.45] tracking-[0.22em] text-white/42">
+                      Why YO? Let the numbers speak.
+                    </div>
                     <div className="min-h-[8.5rem] font-display text-5xl leading-none text-lime">{recommendations.length}</div>
                     <p className="text-base leading-7 text-white/62">
                       Explore personalized recommendations based on your onchain data and an industry-leading risk
