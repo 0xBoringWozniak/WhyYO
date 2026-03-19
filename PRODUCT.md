@@ -2,7 +2,7 @@
 
 ## WHY YO?
 
-**WHY YO** is a portfolio intelligence layer for DeFi users.
+**WHY YO?** is a portfolio intelligence layer for DeFi users.
 It shows, in simple numbers, how moving capital into **YO** can improve portfolio quality.
 
 Users already hold positions across many chains and protocols.
@@ -12,7 +12,7 @@ But most of them still cannot answer simple questions:
 - Am I too concentrated?
 - Do I really get better quality if I move funds into YO?
 
-Why YO gives a clear answer with math, not guesswork.
+This product gives a clear answer with math, not guesswork.
 
 ---
 
@@ -50,7 +50,7 @@ With this, YO becomes an upgrade users can understand.
 
 ## 3. Solution & Features
 
-Why YO scans a wallet, groups positions into simple asset buckets, and compares the current portfolio with YO vaults.
+First,  **WHY YO?** scans a wallet, groups positions into simple asset buckets, and compares the current portfolio with YO vaults.
 
 It explains the value of YO through clear before/after metrics.
 
@@ -186,7 +186,7 @@ This can help us:
 
 ### YO frontend integration
 
-Why YO can become a native intelligence module inside the YO frontend:
+**WHY YO?** can become a native intelligence module inside the YO frontend:
 
 - scan portfolio
 - show improvement case for YO
