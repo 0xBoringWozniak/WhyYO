@@ -642,17 +642,18 @@ const BucketOverviewCard = ({
       : topTokens;
 
   return (
-    <Card className="relative grid h-[82vh] min-h-[840px] max-h-[1000px] grid-rows-[minmax(8.75rem,auto)_minmax(8.5rem,auto)_minmax(3.5rem,auto)_minmax(3.5rem,auto)_minmax(11.5rem,auto)_minmax(0,1fr)] gap-4 overflow-hidden">
-    <Badge
-      tone={hasRecommendation ? "good" : "neutral"}
-      className="absolute right-4 top-4 z-10 h-10 min-w-[86px] max-w-[86px] justify-center px-2 py-0 text-center text-[10px]"
-    >
-      {hasRecommendation ? "LIVE" : "SOON"}
-    </Badge>
-
-    <div className="min-w-0 pr-28">
+    <Card className="relative grid h-[82vh] min-h-[840px] max-h-[1000px] grid-rows-[minmax(8.75rem,auto)_minmax(8.5rem,auto)_minmax(3.5rem,auto)_minmax(3.5rem,auto)_minmax(10.5rem,auto)_minmax(0,1fr)] gap-3 overflow-hidden">
+    <div className="min-w-0">
       <div className="flex min-h-[8.75rem] flex-col justify-end">
-        <div className="text-xs uppercase tracking-[0.22em] text-white/42">{bucket.bucket} bucket</div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="text-xs uppercase tracking-[0.22em] text-white/42">{bucket.bucket} bucket</div>
+          <Badge
+            tone={hasRecommendation ? "good" : "neutral"}
+            className="h-10 min-w-[86px] max-w-[86px] shrink-0 justify-center px-2 py-0 text-center text-[10px]"
+          >
+            {hasRecommendation ? "LIVE" : "SOON"}
+          </Badge>
+        </div>
         <div
           className={cn(
             "mt-3 font-display leading-[0.92] tracking-tight text-white",
@@ -694,13 +695,13 @@ const BucketOverviewCard = ({
       <StackedBar segments={productiveVsIdleSegments} />
     </div>
 
-    <div className="min-h-[12.75rem] space-y-2">
+    <div className="min-h-[10.5rem] space-y-2">
       <div className="text-xs uppercase tracking-[0.2em] text-white/42">Top tokens</div>
       <div className="space-y-2">
         {tokenPreviewItems.length > 0 ? (
-          <div className="grid min-h-[154px] grid-cols-2 auto-rows-[72px] content-start gap-2">
+          <div className="grid min-h-[136px] grid-cols-2 auto-rows-[64px] content-start gap-2">
             {tokenPreviewItems.map((token) => (
-              <div key={token.key} className="flex h-[72px] min-w-0 items-center gap-2 rounded-[22px] border border-white/10 bg-black/45 px-3 py-2.5">
+              <div key={token.key} className="flex h-[64px] min-w-0 items-center gap-2 rounded-[20px] border border-white/10 bg-black/45 px-3 py-2">
                 <AssetIcon src={token.logoUrl} alt={token.symbol} label={token.symbol} className="h-8 w-8 shrink-0" />
                 <div className="min-w-0">
                   <div className="truncate text-[0.95rem] font-semibold leading-tight text-white">{token.symbol}</div>
