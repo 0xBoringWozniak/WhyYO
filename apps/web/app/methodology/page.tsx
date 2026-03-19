@@ -76,6 +76,12 @@ const methodologyFaq: FaqItem[] = [
             Trust is the stricter layer: weak trust can cap or force the final label to{" "}
             <span className={metricQuestionClass}>LOW</span> even when modeled deltas improve.
           </li>
+          <li>
+            Portfolio impact bands are now <span className={metricQuestionClass}>{">"}0.15</span> for{" "}
+            <span className={metricQuestionClass}>HIGH</span>, <span className={metricQuestionClass}>{">"}0.05</span>{" "}
+            for <span className={metricQuestionClass}>MEDIUM</span>, otherwise{" "}
+            <span className={metricQuestionClass}>LOW</span>.
+          </li>
         </ul>
       </div>
     ),
@@ -153,8 +159,10 @@ const methodologyFaq: FaqItem[] = [
             <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.yoShare}%</span>.
           </li>
           <li>
-            Trust metrics are first classified into green, yellow, orange, or red using the same visible breakpoints as
-            the badges.
+            Each portfolio component is converted into a ratio score in the range{" "}
+            <span className={metricQuestionClass}>[-1, 1]</span>: lower-is-better metrics use{" "}
+            <span className={metricQuestionClass}>before / after - 1</span>, higher-is-better metrics use{" "}
+            <span className={metricQuestionClass}>after / before - 1</span>.
           </li>
           <li>
             Hard-low rules apply before anything else: Coverage{" "}
@@ -166,9 +174,11 @@ const methodologyFaq: FaqItem[] = [
             non-improving portfolio delta forces <span className={metricQuestionClass}>LOW</span>.
           </li>
           <li>
-            Outside hard-low, trust acts as a ceiling: only strong deltas plus strong trust produce{" "}
-            <span className={metricQuestionClass}>HIGH</span>; mixed but acceptable cases land in{" "}
-            <span className={metricQuestionClass}>MEDIUM</span>.
+            Outside hard-low, portfolio impact is <span className={metricQuestionClass}>HIGH</span> above{" "}
+            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.bandThresholds.impact.highMin}</span>,
+            <span className={metricQuestionClass}> MEDIUM</span> above{" "}
+            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.bandThresholds.impact.mediumMin}</span>,
+            otherwise <span className={metricQuestionClass}>LOW</span>. Trust still acts as the ceiling.
           </li>
         </ul>
       </div>

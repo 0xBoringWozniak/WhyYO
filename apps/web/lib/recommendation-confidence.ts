@@ -37,13 +37,6 @@ export const RECOMMENDATION_CONFIDENCE_CONFIG = {
       orangeMax: 30,
     },
   },
-  portfolioDeltaNormalization: {
-    weightedRisk: 0.4,
-    savingsScore: 12,
-    diversificationPctPoints: 15,
-    highRiskExposurePctPoints: 10,
-    fallbackImpactScore: 0.4,
-  },
   hardLowRules: {
     coverageMin: 30,
     maxRedTrustMetricsBeforeLow: 1,
@@ -51,8 +44,8 @@ export const RECOMMENDATION_CONFIDENCE_CONFIG = {
   },
   bandThresholds: {
     impact: {
-      mediumMin: 0.35,
-      highMin: 0.65,
+      mediumMin: 0.05,
+      highMin: 0.15,
     },
     trust: {
       mediumMin: 0.45,
@@ -68,10 +61,23 @@ export const RECOMMENDATION_CONFIDENCE_CONFIG = {
   },
 } as const;
 
-const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
+const clampSigned = (value: number) => Math.min(Math.max(value, -1), 1);
 
-const normalizeImprovement = (improvement: number | null, fullScoreAt: number): number | null =>
-  improvement === null ? null : clamp01(improvement / fullScoreAt);
+const toLowerBetterRatio = (before: number | null, after: number | null): number | null => {
+  if (before === null || after === null) return null;
+  if (before === 0 && after === 0) return 0;
+  if (before === 0 && after > 0) return -1;
+  if (after === 0 && before > 0) return 1;
+  return clampSigned(before / after - 1);
+};
+
+const toHigherBetterRatio = (before: number | null, after: number | null): number | null => {
+  if (before === null || after === null) return null;
+  if (before === 0 && after === 0) return 0;
+  if (before === 0 && after > 0) return 1;
+  if (after === 0 && before > 0) return -1;
+  return clampSigned(after / before - 1);
+};
 
 export const trustMetricToneClass = (status: TrustMetricStatus) => {
   switch (status) {
@@ -156,12 +162,16 @@ const getPortfolioDeltaDetails = (recommendation: RankedRecommendation) => {
     savingsScoreImprovement,
     diversificationImprovementPctPoints,
     highRiskExposureImprovementPctPoints,
+    diversificationBeforePct:
+      recommendation.metrics.protocolHHIBefore != null ? (1 - recommendation.metrics.protocolHHIBefore) * 100 : null,
+    diversificationAfterPct:
+      recommendation.metrics.protocolHHIAfter != null ? (1 - recommendation.metrics.protocolHHIAfter) * 100 : null,
   };
 };
 
 const getBand = (score: number, thresholds: { mediumMin: number; highMin: number }) => {
-  if (score >= thresholds.highMin) return "high";
-  if (score >= thresholds.mediumMin) return "medium";
+  if (score > thresholds.highMin) return "high";
+  if (score > thresholds.mediumMin) return "medium";
   return "low";
 };
 
@@ -207,38 +217,31 @@ export const getRecommendationConfidence = (recommendation: RankedRecommendation
     savingsScoreImprovement,
     diversificationImprovementPctPoints,
     highRiskExposureImprovementPctPoints,
+    diversificationBeforePct,
+    diversificationAfterPct,
   } = getPortfolioDeltaDetails(recommendation);
 
   const portfolioComponents = [
     {
       weight: RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.weightedRisk,
-      score: normalizeImprovement(
-        weightedRiskImprovement,
-        RECOMMENDATION_CONFIDENCE_CONFIG.portfolioDeltaNormalization.weightedRisk,
-      ),
+      score: toLowerBetterRatio(recommendation.metrics.weightedRiskBefore, recommendation.metrics.weightedRiskAfter),
       improving: weightedRiskImprovement !== null ? weightedRiskImprovement > 0 : null,
     },
     {
       weight: RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.savingsScore,
-      score: normalizeImprovement(
-        savingsScoreImprovement,
-        RECOMMENDATION_CONFIDENCE_CONFIG.portfolioDeltaNormalization.savingsScore,
-      ),
+      score: toHigherBetterRatio(recommendation.metrics.savingsScoreBefore, recommendation.metrics.savingsScoreAfter),
       improving: savingsScoreImprovement !== null ? savingsScoreImprovement > 0 : null,
     },
     {
       weight: RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.diversification,
-      score: normalizeImprovement(
-        diversificationImprovementPctPoints,
-        RECOMMENDATION_CONFIDENCE_CONFIG.portfolioDeltaNormalization.diversificationPctPoints,
-      ),
+      score: toHigherBetterRatio(diversificationBeforePct, diversificationAfterPct),
       improving: diversificationImprovementPctPoints !== null ? diversificationImprovementPctPoints > 0 : null,
     },
     {
       weight: RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.highRiskExposure,
-      score: normalizeImprovement(
-        highRiskExposureImprovementPctPoints,
-        RECOMMENDATION_CONFIDENCE_CONFIG.portfolioDeltaNormalization.highRiskExposurePctPoints,
+      score: toLowerBetterRatio(
+        recommendation.metrics.highRiskBeforePct != null ? recommendation.metrics.highRiskBeforePct * 100 : null,
+        recommendation.metrics.highRiskAfterPct != null ? recommendation.metrics.highRiskAfterPct * 100 : null,
       ),
       improving: highRiskExposureImprovementPctPoints !== null ? highRiskExposureImprovementPctPoints > 0 : null,
     },
@@ -252,7 +255,7 @@ export const getRecommendationConfidence = (recommendation: RankedRecommendation
     measurablePortfolioComponents.length > 0
       ? measurablePortfolioComponents.reduce((sum, component) => sum + component.weight * (component.score ?? 0), 0) /
         measurablePortfolioComponents.reduce((sum, component) => sum + component.weight, 0)
-      : RECOMMENDATION_CONFIDENCE_CONFIG.portfolioDeltaNormalization.fallbackImpactScore;
+      : 0;
 
   const redTrustMetricCount = Object.values(trustStatuses).filter((status) => status === "red").length;
   const nonImprovingPortfolioMetricCount = portfolioComponents.filter((component) => component.improving === false).length;
@@ -293,6 +296,12 @@ export const getRecommendationConfidence = (recommendation: RankedRecommendation
       savingsScoreImprovement,
       diversificationImprovementPctPoints,
       highRiskExposureImprovementPctPoints,
+    },
+    portfolioComponentScores: {
+      weightedRisk: portfolioComponents[0]?.score ?? null,
+      savingsScore: portfolioComponents[1]?.score ?? null,
+      diversification: portfolioComponents[2]?.score ?? null,
+      highRiskExposure: portfolioComponents[3]?.score ?? null,
     },
   };
 };
