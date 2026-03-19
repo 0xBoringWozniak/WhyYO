@@ -106,25 +106,9 @@ Then we explain the result.
 - **Savings Profile Score**
   `SPS_b = 100 * (1 - Penalty_b)`
 
-### Recommendation logic
+### Impact / Trust framework
 
 We rank YO by expected portfolio improvement, not by marketing priority.
-
-At a high level, the engine rewards:
-
-- lower risk
-- lower high-risk exposure
-- lower concentration
-- better simplicity
-- better use of idle capital
-
-And it penalizes:
-
-- low coverage
-- weak improvement
-- very small move sizes
-
-### Impact / Trust framework
 
 We use two simple lenses:
 
@@ -132,14 +116,14 @@ We use two simple lenses:
 - **Trust** = how reliable the data is
 
 The rule is simple:
-**only <span style="color: #16a34a;">High</span> Impact + <span style="color: #16a34a;">High</span> Trust gives a <span style="color: #16a34a;">High</span> recommendation.**
+**only 🟢 High Impact + 🟢 High Trust gives a 🟢 High recommendation.**
 
 | Impact | Trust | Final output |
 | --- | --- | --- |
-| <span style="color: #16a34a;">High</span> | <span style="color: #16a34a;">High</span> | <span style="color: #16a34a;"><strong>High recommendation</strong></span> |
-| <span style="color: #16a34a;">High</span> | <span style="color: #dc2626;">Low</span> | <span style="color: #ca8a04;">Medium</span> or cautious recommendation |
-| <span style="color: #dc2626;">Low</span> | <span style="color: #16a34a;">High</span> | <span style="color: #ca8a04;">Medium</span> or weak recommendation |
-| <span style="color: #dc2626;">Low</span> | <span style="color: #dc2626;">Low</span> | <span style="color: #dc2626;">Low</span> or informational only |
+| 🟢 High | 🟢 High | 🟢 **High recommendation** |
+| 🟢 High | 🔴 Low | 🟡 Medium or cautious recommendation |
+| 🔴 Low | 🟢 High | 🟡 Medium or weak recommendation |
+| 🔴 Low | 🔴 Low | 🔴 Low or informational only |
 
 In the product:
 
@@ -193,34 +177,14 @@ The user can act on it immediately.
 
 ## 7. Future Improvements
 
-### Full portfolio migration UX
+- **Full migration UX**  
+  Move users from fragmented protocol positions into YO in one guided flow.
 
-Today we show where YO can improve the portfolio.
-Next, we can help users move capital from existing protocols into YO with a full migration flow.
+- **ML recommendation layer**  
+  Add U2I RecSys logic, where users are wallets and items are DeFi protocols and tokens.
 
-### ML recommendation system
+- **YO + Exponent**  
+  Build a broader allocation layer that can route users across YO and Exponent products.
 
-We can add a RecSys layer on top of the deterministic engine.
-
-One promising approach is **U2I (user-to-item)** recommendations, where:
-
-- **User** = wallet or portfolio state
-- **Item** = DeFi protocols and tokens
-
-This can help us:
-
-- learn which YO products fit which user profiles
-- personalize recommendations better
-- improve ranking beyond fixed rules
-
-### YO frontend integration
-
-**WHY YO?** can become a native intelligence module inside the YO frontend:
-
-- scan portfolio
-- show improvement case for YO
-- suggest the best vault
-- execute deposit in the same flow
-
-This creates a full loop:
-**analyze -> explain -> recommend -> migrate -> deposit**
+- **WHY YO? as the ultimate DeFi portfolio layer**  
+  Turn Why YO into the main intelligence layer for DeFi: analyze, explain, recommend, migrate, and deploy in one place.
