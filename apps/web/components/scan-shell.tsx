@@ -1502,7 +1502,9 @@ export const ScanShell = ({
 
               <section className="space-y-5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="yo-display text-[2.5rem] leading-none text-white md:text-[3.5rem]">RECOMMENDATIONS</h2>
+                  <h2 className="yo-display text-[2.5rem] leading-none text-white md:text-[3.5rem]">
+                    WHY YO? LET THE NUMBERS SPEAK.
+                  </h2>
                   {recommendations.length > 1 ? (
                     <div className="ml-1 flex items-center gap-2">
                       <Button
