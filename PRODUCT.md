@@ -1,8 +1,8 @@
 # Why YO
 
-## Product Pitch
+## WHY YO?
 
-**Why YO** is a portfolio intelligence layer for DeFi users.
+**WHY YO** is a portfolio intelligence layer for DeFi users.
 It shows, in simple numbers, how moving capital into **YO** can improve portfolio quality.
 
 Users already hold positions across many chains and protocols.
