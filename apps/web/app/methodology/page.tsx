@@ -17,12 +17,13 @@ const metricQuestionClass = "font-semibold text-lime";
 const methodologyFaq: FaqItem[] = [
   {
     id: "engine",
-    question: "What does WHY YO? compare?",
+    question: "How WHY YO works?",
     answer: (
       <p>
-        The engine compares each portfolio bucket separately. It looks at wallet idle balances, productive DeFi
-        positions, and the matching YO vault for that same bucket, then computes deterministic metrics first and adds
-        narrative copy later.
+        WHY YO collects onchain wallet data, groups positions by bucket, and scores each bucket with portfolio risk
+        metrics. It then compares a move into the matching YO vault against the current setup to estimate whether the
+        portfolio improves. Recommendations are driven by both modeled metric impact and system trust, which is shown
+        through <span className={metricQuestionClass}>Confidence</span>.
       </p>
     ),
   },
@@ -40,61 +41,11 @@ const methodologyFaq: FaqItem[] = [
     ),
   },
   {
-    id: "confidence-overview",
-    question: "Confidence",
-    answer: (
-      <div className="space-y-3">
-        <p>
-          The UI now shows one meta-metric: <span className={metricQuestionClass}>Confidence</span>. It replaces the
-          old split between Trust index and Recommendation state.
-        </p>
-        <ul className="list-disc space-y-2 pl-5">
-          <li>
-            It blends <span className={metricQuestionClass}>portfolio improvement deltas</span> with a stricter{" "}
-            <span className={metricQuestionClass}>trust layer</span>.
-          </li>
-          <li>
-            Portfolio side uses Weighted risk{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.weightedRisk}%</span>,
-            Savings score{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.savingsScore}%</span>,
-            Diversification{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.diversification}%</span>,
-            and High-risk exposure{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.highRiskExposure}%</span>.
-          </li>
-          <li>
-            Trust side uses Coverage{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.coverage}%</span>,
-            Vault high-risk{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.vaultHighRisk}%</span>,
-            Overlap <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.overlap}%</span>,
-            and YO share{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.yoShare}%</span>.
-          </li>
-          <li>
-            Trust is the stricter layer: weak trust can cap or force the final label to{" "}
-            <span className={metricQuestionClass}>LOW</span> even when modeled deltas improve.
-          </li>
-          <li>
-            Portfolio impact bands are now <span className={metricQuestionClass}>{">"}0.15</span> for{" "}
-            <span className={metricQuestionClass}>HIGH</span>, <span className={metricQuestionClass}>{">"}0.05</span>{" "}
-            for <span className={metricQuestionClass}>MEDIUM</span>, otherwise{" "}
-            <span className={metricQuestionClass}>LOW</span>.
-          </li>
-        </ul>
-      </div>
-    ),
-  },
-  {
     id: "ranking",
     question: "How are recommendations ranked?",
     answer: (
       <div className="space-y-3">
-        <p>
-          The ranker does not use one universal score anymore. It computes three intent-specific scores and then picks
-          the best fit:
-        </p>
+        <p>The ranker computes three intent-specific scores and then picks the best fit:</p>
         <ul className="list-disc space-y-2 pl-5">
           <li>
             <span className={metricQuestionClass}>Risk improvement</span>: emphasizes weighted-risk reduction,
@@ -110,75 +61,6 @@ const methodologyFaq: FaqItem[] = [
             <span className={metricQuestionClass}>Idle deployment</span>: emphasizes idle share, idle USD size,
             estimated yield opportunity, vault quality, and structure improvement, then penalizes weak coverage and
             undersized buckets.
-          </li>
-        </ul>
-      </div>
-    ),
-  },
-  {
-    id: "coverage-rules",
-    question: "What happens when coverage is low?",
-    answer: (
-      <p>
-        Coverage is now a primary trust input inside <span className={metricQuestionClass}>Confidence</span>, not just
-        a display number. Coverage above <span className={metricQuestionClass}>{">"}60%</span> is green,{" "}
-        <span className={metricQuestionClass}>30-60%</span> is yellow, and below{" "}
-        <span className={metricQuestionClass}>30%</span> is red. Hard-low rule: if coverage drops below{" "}
-        <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.hardLowRules.coverageMin}%</span>, the
-        final confidence becomes <span className={metricQuestionClass}>LOW</span>.
-      </p>
-    ),
-  },
-  {
-    id: "confidence-methodology",
-    question: "How does Confidence work?",
-    answer: (
-      <div className="space-y-3">
-        <p>
-          <span className={metricQuestionClass}>Confidence</span> is built from two layers: portfolio deltas and trust
-          metrics.
-        </p>
-        <ul className="list-disc space-y-2 pl-5">
-          <li>
-            Portfolio deltas are weighted as Weighted risk{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.weightedRisk}%</span>,
-            Savings score{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.savingsScore}%</span>,
-            Diversification{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.diversification}%</span>,
-            and High-risk exposure{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.highRiskExposure}%</span>.
-          </li>
-          <li>
-            Trust metrics are weighted as Coverage{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.coverage}%</span>,
-            Vault high-risk{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.vaultHighRisk}%</span>,
-            Overlap <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.overlap}%</span>,
-            and YO share{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.yoShare}%</span>.
-          </li>
-          <li>
-            Each portfolio component is converted into a ratio score in the range{" "}
-            <span className={metricQuestionClass}>[-1, 1]</span>: lower-is-better metrics use{" "}
-            <span className={metricQuestionClass}>before / after - 1</span>, higher-is-better metrics use{" "}
-            <span className={metricQuestionClass}>after / before - 1</span>.
-          </li>
-          <li>
-            Hard-low rules apply before anything else: Coverage{" "}
-            <span className={metricQuestionClass}>{"<"}{RECOMMENDATION_CONFIDENCE_CONFIG.hardLowRules.coverageMin}%</span>,
-            more than{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.hardLowRules.maxRedTrustMetricsBeforeLow}</span>{" "}
-            red trust metric, or more than{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.hardLowRules.maxNonImprovingPortfolioMetricsBeforeLow}</span>{" "}
-            non-improving portfolio delta forces <span className={metricQuestionClass}>LOW</span>.
-          </li>
-          <li>
-            Outside hard-low, portfolio impact is <span className={metricQuestionClass}>HIGH</span> above{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.bandThresholds.impact.highMin}</span>,
-            <span className={metricQuestionClass}> MEDIUM</span> above{" "}
-            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.bandThresholds.impact.mediumMin}</span>,
-            otherwise <span className={metricQuestionClass}>LOW</span>. Trust still acts as the ceiling.
           </li>
         </ul>
       </div>
@@ -262,10 +144,51 @@ const metricFaq: FaqItem[] = [
     id: METHODOLOGY_SECTION_IDS.confidence,
     question: <span className={metricQuestionClass}>Confidence</span>,
     answer: (
-      <p>
-        Confidence is the single meta-metric shown in recommendation cards and preview. It combines weighted portfolio
-        deltas with a stricter trust layer, then compresses the result into HIGH, MEDIUM, or LOW.
-      </p>
+      <div className="space-y-3">
+        <p>
+          Confidence combines portfolio improvement and system trust into one final label for the recommendation.
+        </p>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>
+            Portfolio deltas are weighted as Weighted risk{" "}
+            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.weightedRisk}%</span>,
+            Savings score{" "}
+            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.savingsScore}%</span>,
+            Diversification{" "}
+            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.diversification}%</span>,
+            and High-risk exposure{" "}
+            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.portfolioWeights.highRiskExposure}%</span>.
+          </li>
+          <li>
+            Trust metrics are weighted as Coverage{" "}
+            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.coverage}%</span>,
+            Vault high-risk{" "}
+            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.vaultHighRisk}%</span>,
+            Overlap <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.overlap}%</span>,
+            and YO share{" "}
+            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.trustWeights.yoShare}%</span>.
+          </li>
+          <li>
+            Each portfolio component is converted into a ratio score in the range{" "}
+            <span className={metricQuestionClass}>[-1, 1]</span>: lower-is-better metrics use{" "}
+            <span className={metricQuestionClass}>before / after - 1</span>, higher-is-better metrics use{" "}
+            <span className={metricQuestionClass}>after / before - 1</span>.
+          </li>
+          <li>
+            Hard-low rules apply before anything else: Coverage{" "}
+            <span className={metricQuestionClass}>{"<"}{RECOMMENDATION_CONFIDENCE_CONFIG.hardLowRules.coverageMin}%</span>,
+            too many red trust metrics, or too many non-improving portfolio deltas force{" "}
+            <span className={metricQuestionClass}>LOW</span>.
+          </li>
+          <li>
+            Outside hard-low, portfolio impact is <span className={metricQuestionClass}>HIGH</span> above{" "}
+            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.bandThresholds.impact.highMin}</span>,
+            <span className={metricQuestionClass}> MEDIUM</span> above{" "}
+            <span className={metricQuestionClass}>{RECOMMENDATION_CONFIDENCE_CONFIG.bandThresholds.impact.mediumMin}</span>,
+            otherwise <span className={metricQuestionClass}>LOW</span>. Trust still acts as the ceiling.
+          </li>
+        </ul>
+      </div>
     ),
   },
   {
@@ -279,13 +202,6 @@ const metricFaq: FaqItem[] = [
     ),
   },
   {
-    id: METHODOLOGY_SECTION_IDS.yoShare,
-    question: <span className={metricQuestionClass}>YO share</span>,
-    answer: (
-      <p>How much of the current bucket is already allocated to the same target YO vault.</p>
-    ),
-  },
-  {
     id: METHODOLOGY_SECTION_IDS.vaultHighRisk,
     question: <span className={metricQuestionClass}>Vault high-risk</span>,
     answer: (
@@ -296,10 +212,13 @@ const metricFaq: FaqItem[] = [
     id: METHODOLOGY_SECTION_IDS.overlap,
     question: <span className={metricQuestionClass}>Overlap</span>,
     answer: (
-      <p>
-        Overlap between the user&apos;s current productive protocol mix and the target YO vault protocol mix. Lower
-        overlap means YO is taking the bucket to a more different protocol set.
-      </p>
+      <div className="space-y-3">
+        <div id={METHODOLOGY_SECTION_IDS.yoShare} className="scroll-mt-6" />
+        <p>
+          Overlap between the user&apos;s current productive protocol mix and the target YO vault protocol mix. Lower
+          overlap means YO is taking the bucket to a more different protocol set.
+        </p>
+      </div>
     ),
   },
 ];
@@ -337,10 +256,13 @@ export default function MethodologyPage() {
       const hash = window.location.hash.replace(/^#/, "");
       if (!hash) return;
       const element = document.getElementById(hash);
-      if (!(element instanceof HTMLDetailsElement)) return;
-      element.open = true;
+      if (!element) return;
+      const detailsElement =
+        element instanceof HTMLDetailsElement ? element : element.closest("details");
+      if (!(detailsElement instanceof HTMLDetailsElement)) return;
+      detailsElement.open = true;
       window.requestAnimationFrame(() => {
-        element.scrollIntoView({ block: "start" });
+        (element instanceof HTMLDetailsElement ? element : detailsElement).scrollIntoView({ block: "start" });
       });
     };
 
@@ -369,18 +291,15 @@ export default function MethodologyPage() {
         <div className="space-y-5">
           <div className="text-sm uppercase tracking-[0.24em] text-white/45">Methodology</div>
           <h1 className="max-w-4xl text-5xl font-semibold leading-tight text-white md:text-6xl">
-            How WHY YO? scores your next move
+            How your move are scored
           </h1>
           <p className="max-w-3xl text-lg leading-8 text-white/68">
             Higher <span className={metricQuestionClass}>Diversification</span> and{" "}
             <span className={metricQuestionClass}>Savings score</span> are better. Lower{" "}
             <span className={metricQuestionClass}>Weighted risk</span>,{" "}
             <span className={metricQuestionClass}>High-risk exposure</span>,{" "}
-            <span className={metricQuestionClass}>Vault high-risk</span>,{" "}
-            <span className={metricQuestionClass}>YO share</span>, and{" "}
-            <span className={metricQuestionClass}>Overlap</span> are better.{" "}
-            <span className={metricQuestionClass}>Risk coverage</span> should be read together with recommendation
-            caution.
+            <span className={metricQuestionClass}>Vault high-risk</span> are better.{" "}
+            <span className="font-semibold text-[#ffd84d]">Confidence</span> shows the strength of recommendations.
           </p>
           <div className="flex flex-wrap gap-3">
             <button

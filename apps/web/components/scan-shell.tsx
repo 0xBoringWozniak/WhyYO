@@ -46,7 +46,7 @@ const thinkingPhrasesV0 = [
 ];
 
 const thinkingPhrases = [
-  "Welcome to WhyYO",
+  "Welcome to WHY YO?",
   "We'll help you get the most out of your DeFi assets with YO vaults",
   "Loading portfolio data from on-chain",
   "Bucket-specific recommendations are preparing",
@@ -642,7 +642,7 @@ const BucketOverviewCard = ({
       : topTokens;
 
   return (
-    <Card className="relative flex h-[82vh] min-h-[820px] max-h-[980px] flex-col space-y-4 overflow-hidden">
+    <Card className="relative grid h-[82vh] min-h-[820px] max-h-[980px] grid-rows-[minmax(8.75rem,auto)_minmax(8.5rem,auto)_minmax(3.5rem,auto)_minmax(3.5rem,auto)_minmax(12.75rem,auto)_minmax(0,1fr)] gap-4 overflow-hidden">
     <Badge
       tone={hasRecommendation ? "good" : "neutral"}
       className="absolute right-4 top-4 z-10 h-10 min-w-[86px] max-w-[86px] justify-center px-2 py-0 text-center text-[10px]"
@@ -651,7 +651,7 @@ const BucketOverviewCard = ({
     </Badge>
 
     <div className="min-w-0 pr-28">
-      <div>
+      <div className="flex min-h-[8.75rem] flex-col justify-end">
         <div className="text-xs uppercase tracking-[0.22em] text-white/42">{bucket.bucket} bucket</div>
         <div
           className={cn(
@@ -664,33 +664,37 @@ const BucketOverviewCard = ({
       </div>
     </div>
 
-    <div className="grid gap-x-6 gap-y-3 text-base text-white/76 md:grid-cols-2">
-      <div>
+    <div className="grid h-full auto-rows-fr gap-x-6 gap-y-3 text-base text-white/76 md:grid-cols-2">
+      <div className="flex min-h-[4rem] flex-col">
         <div className="text-white/62">Idle capital</div>
         <div className="mt-1 text-white">{formatUsd(bucket.idleAssetUsd)}</div>
       </div>
-      <div>
+      <div className="flex min-h-[4rem] flex-col">
         <div className="text-white/62">
           <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.riskCoverage}>Risk coverage</MethodologyLink>
         </div>
         <div className="mt-1 text-white">{formatCoverage(bucket.riskCoveragePct)}</div>
       </div>
-      <div>
+      <div className="flex min-h-[4rem] flex-col">
         <div className="text-white/62">
           <MethodologyLink sectionId={METHODOLOGY_SECTION_IDS.diversification}>Diversification</MethodologyLink>
         </div>
         <div className="mt-1 text-white">{formatDiversification(bucket.protocolHHI)}</div>
       </div>
-      <div>
+      <div className="flex min-h-[4rem] flex-col">
         <div className="text-white/62">Positions</div>
         <div className="mt-1 text-white">{displayPositionCount}</div>
       </div>
     </div>
 
-    <StackedBar segments={coverageSegments} />
-    <StackedBar segments={productiveVsIdleSegments} />
+    <div className="min-h-[3.5rem]">
+      <StackedBar segments={coverageSegments} />
+    </div>
+    <div className="min-h-[3.5rem]">
+      <StackedBar segments={productiveVsIdleSegments} />
+    </div>
 
-    <div className="space-y-2">
+    <div className="min-h-[12.75rem] space-y-2">
       <div className="text-xs uppercase tracking-[0.2em] text-white/42">Top tokens</div>
       <div className="space-y-2">
         {tokenPreviewItems.length > 0 ? (
@@ -1366,7 +1370,7 @@ export const ScanShell = ({
               <div className="space-y-4">
                 <Card className="space-y-3">
                   <p className="max-w-xl text-[1.15rem] leading-8 text-white/72">
-                    WhyYO tool scans your wallet, scores risk and diversification bucket by bucket, and shows where{" "}
+                    WHY YO scans your wallet, scores risk and diversification bucket by bucket, and shows where{" "}
                     <a
                       href="https://yo.xyz"
                       target="_blank"
