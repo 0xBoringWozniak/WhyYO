@@ -21,7 +21,6 @@ import {
 } from "../lib/recommendation-confidence";
 import { cn, formatPct, formatUsd } from "../lib/utils";
 import { setWalletReconnectEnabled } from "../lib/wagmi";
-import { useYoVaults } from "../lib/yo-sdk";
 import { useScanStore } from "../store/use-scan-store";
 import { AssetIcon } from "./asset-icon";
 import { ConfidenceBadge } from "./confidence-badge";
@@ -621,14 +620,12 @@ const RecommendationCard = ({
   onConnectRequest,
   tokenExposures,
   protocolExposures,
-  yoVaults,
 }: {
   recommendation: RankedRecommendation;
   walletAddress: string;
   onConnectRequest: () => void;
   tokenExposures: CanonicalTokenExposure[];
   protocolExposures: CanonicalProtocolExposure[];
-  yoVaults: NonNullable<ReturnType<typeof useYoVaults>["vaults"]>;
 }) => {
   const accent = getVaultAccent(recommendation.vaultSymbol);
   const showDepositButton = recommendation.suggestedUsd > 0;
@@ -636,7 +633,6 @@ const RecommendationCard = ({
     recommendation,
     tokenExposures,
     protocolExposures,
-    vaults: yoVaults ?? [],
   });
   const withdrawalPlan = buildWithdrawalPlan({
     recommendation,
@@ -1147,7 +1143,6 @@ export const ScanShell = ({
   const tokenExposures = visibleScan?.portfolioOverview.tokenExposures ?? [];
   const protocolExposures = visibleScan?.portfolioOverview.protocolExposures ?? [];
   const analyzedUsd = visibleScan?.portfolioOverview.analyzedUsd ?? 0;
-  const { vaults: yoVaults = [] } = useYoVaults();
 
   React.useEffect(() => {
     const element = recommendationsScrollerRef.current;
@@ -1407,7 +1402,6 @@ export const ScanShell = ({
                           onConnectRequest={openConnectChoice}
                           tokenExposures={tokenExposures}
                           protocolExposures={protocolExposures}
-                          yoVaults={yoVaults}
                         />
                       ))}
                     </div>

@@ -1,5 +1,4 @@
 import type { CanonicalChain, CanonicalProtocolExposure, CanonicalTokenExposure, RankedRecommendation } from "@whyyo/shared";
-import type { YoVaultStatsItem } from "./yo-sdk";
 
 export type IdleSourcePlan = {
   symbol: string;
@@ -27,6 +26,8 @@ type SupportedDepositRoute = {
   address: string;
 };
 
+type SupportedDirectVault = "yoUSD" | "yoBTC" | "yoETH";
+
 const USD_BUCKET_SYMBOLS = new Set(["USD", "USDC", "USDT", "USDS", "DAI", "USDE", "USDBC"]);
 const ETH_BUCKET_SYMBOLS = new Set(["ETH", "WETH", "STETH", "WSTETH", "WEETH", "CBETH", "EETH"]);
 const BTC_BUCKET_SYMBOLS = new Set(["BTC", "WBTC", "CBBTC", "TBTC", "SOLVBTC.JUP", "SOLVBTC"]);
@@ -37,6 +38,51 @@ const CHAIN_TO_ID: Partial<Record<CanonicalChain, number>> = {
   arbitrum: 42161,
   optimism: 10,
   polygon: 137,
+};
+
+// Mirrors the current @yo-protocol/core VAULTS config for safe direct deposits.
+const SAFE_DIRECT_DEPOSIT_ROUTES: Record<SupportedDirectVault, SupportedDepositRoute[]> = {
+  yoUSD: [
+    {
+      chainId: 1,
+      symbol: "USDC",
+      address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    },
+    {
+      chainId: 8453,
+      symbol: "USDC",
+      address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+    },
+    {
+      chainId: 42161,
+      symbol: "USDC",
+      address: "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+    },
+  ],
+  yoBTC: [
+    {
+      chainId: 1,
+      symbol: "CBBTC",
+      address: "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+    },
+    {
+      chainId: 8453,
+      symbol: "CBBTC",
+      address: "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
+    },
+  ],
+  yoETH: [
+    {
+      chainId: 1,
+      symbol: "WETH",
+      address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+    },
+    {
+      chainId: 8453,
+      symbol: "WETH",
+      address: "0x4200000000000000000000000000000000000006",
+    },
+  ],
 };
 
 const normalizeAddress = (value?: string | null) => value?.trim().toLowerCase() ?? "";
@@ -60,55 +106,23 @@ const inferTokenDecimals = (symbol: string, bucket: string) => {
   return 18;
 };
 
-const getSupportedDepositRoutes = ({
-  recommendation,
-  vaults,
-}: {
-  recommendation: RankedRecommendation;
-  vaults: YoVaultStatsItem[];
-}): SupportedDepositRoute[] => {
-  const normalizedVaultAddress = normalizeAddress(recommendation.vaultAddress);
-  const matchedVault =
-    vaults.find((vault) => normalizeAddress(vault.contracts?.vaultAddress) === normalizedVaultAddress) ??
-    vaults.find((vault) => vault.id === recommendation.vaultSymbol || vault.name === recommendation.vaultSymbol);
-  if (!matchedVault) return [];
-
-  const routes = [
-    {
-      chainId: matchedVault.chain.id,
-      symbol: matchedVault.asset.symbol,
-      address: matchedVault.asset.address,
-    },
-    ...(matchedVault.secondaryVaults ?? []).map((vault) => ({
-      chainId: vault.chain.id,
-      symbol: vault.asset.symbol,
-      address: vault.asset.address,
-    })),
-  ];
-
-  const deduped = new Map<string, SupportedDepositRoute>();
-  for (const route of routes) {
-    const key = `${route.chainId}:${normalizeAddress(route.address) || route.symbol.toUpperCase()}`;
-    deduped.set(key, route);
-  }
-
-  return [...deduped.values()];
-};
+const getSupportedDepositRoutes = (recommendation: RankedRecommendation): SupportedDepositRoute[] =>
+  SAFE_DIRECT_DEPOSIT_ROUTES[recommendation.vaultSymbol as SupportedDirectVault] ?? [];
 
 const matchesSupportedRoute = (token: CanonicalTokenExposure, routes: SupportedDepositRoute[]) => {
   const chainId = CHAIN_TO_ID[token.chain];
   if (!chainId) return false;
 
   const tokenAddress = normalizeAddress(token.tokenAddress);
-  if (!isEvmAddress(tokenAddress)) return false;
-
   const tokenSymbol = (token.parentSymbol ?? token.symbol).toUpperCase();
 
   return routes.some((route) => {
     if (route.chainId !== chainId) return false;
 
     const routeAddress = normalizeAddress(route.address);
-    if (routeAddress && tokenAddress === routeAddress) return true;
+    if (isEvmAddress(tokenAddress)) {
+      return routeAddress === tokenAddress;
+    }
 
     return route.symbol.toUpperCase() === tokenSymbol;
   });
@@ -118,12 +132,10 @@ export const buildIdleSourcePlan = ({
   recommendation,
   tokenExposures,
   protocolExposures,
-  vaults = [],
 }: {
   recommendation: RankedRecommendation;
   tokenExposures: CanonicalTokenExposure[];
   protocolExposures: CanonicalProtocolExposure[];
-  vaults?: YoVaultStatsItem[];
 }): IdleSourcePlan | null => {
   const targetIdleUsd = Math.min(recommendation.suggestedUsd, recommendation.suggestedAmounts.idleFirstUsd);
   if (targetIdleUsd <= 0) return null;
@@ -146,7 +158,7 @@ export const buildIdleSourcePlan = ({
 
   if (candidates.length === 0) return null;
 
-  const supportedRoutes = getSupportedDepositRoutes({ recommendation, vaults });
+  const supportedRoutes = getSupportedDepositRoutes(recommendation);
   const directCandidates = supportedRoutes.length > 0 ? candidates.filter((token) => matchesSupportedRoute(token, supportedRoutes)) : [];
   const best = (directCandidates.length > 0 ? directCandidates : candidates)[0];
   if (!best) return null;
